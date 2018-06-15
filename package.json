@@ -9,7 +9,11 @@
     "dev": "env-cmd .env yarn run hubot --name chewie"
   },
   "dependencies": {
+    "@colony/colony-contract-loader-network": "^1.0.1",
+    "@colony/colony-js-adapter-ethers": "^1.4.1",
+    "@colony/colony-js-client": "^1.4.1",
     "env-cmd": "^8.0.2",
+    "ethers": "^3.0.21",
     "figma-js": "^1.3.4",
     "githubot": "^1.0.1",
     "hubot": "^3.0.1",
