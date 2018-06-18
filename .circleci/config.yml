@@ -10,6 +10,7 @@ jobs:
       - image: google/cloud-sdk
     steps:
       - checkout
+      - setup_remote_docker
       - run:
           name: Build Docker Image
           command: docker build -t eu.gcr.io/${GOOGLE_PROJECT_ID}/chewie-${CIRCLE_SHA1} .
