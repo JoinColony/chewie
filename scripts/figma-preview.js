@@ -6,26 +6,58 @@
 //
 // Dependencies:
 //   'figma-js': '1.3.x'
+//   'api-slack'
 //
 // Author:
 //   sprusr
 
-const Figma = require('figma-js')
-
 module.exports = (robot) => {
+  const Figma = require('figma-js')
   const figma = Figma.Client({
     personalAccessToken: process.env.HUBOT_FIGMA_TOKEN
   })
+  const slack = robot.adapterName === 'slack' ? new WebClient(robot.adapter.options.token) : undefined
+  const fileRegex = /https:\/\/www.figma.com\/file\/([A-z0-9]*)\/?/g
 
-  robot.hear(/https:\/\/www.figma.com\/file\/([A-z0-9]*)\/?/, async msg => {
-    try {
-      const fileId = msg.match[1]
-      const file = await figma.file(fileId)
-      const name = file.data.name
-      const thumbnail = file.data.thumbnailUrl
-      msg.send(`${name} ${thumbnail}`)
-    } catch (error) {
-      console.error(error)
+  const simpleFigma = async (msg, files) => {
+    let response = ''
+    for (let file of files) {
+      response += `${file.name} ${file.thumbnailUrl}\n`
     }
+    msg.send(response.trim())
+  }
+
+  const slackFigma = async (msg, files) => {
+    for (let file of files) {
+      await slack.chat.postMessage({
+        channel: msg.message.rawMessage.channel.id,
+        attachments: [{
+          fallback: `${file.name} on Figma ${file.thumbnailUrl}`,
+          color: '#36a64f',
+          title: file.name,
+          title_link: file.url,
+          image_url: file.thumbnailUrl,
+          footer: 'Figma',
+          footer_icon: 'https://static.figma.com/app/icon/1/favicon.png',
+          ts: Date.parse(file.lastModified) // to unixtime
+        }]
+      })
+    }
+  }
+
+  robot.hear(fileRegex, async msg => {
+    let matches, files = []
+    while (matches = fileRegex.exec(msg.message.text)) {
+      const fileId = matches[1]
+      try {
+        const file = await figma.file(fileId)
+        file.url = matches[0]
+        files.push(file.data)
+      } catch (error) {
+        console.error('Error getting Figma file: ', error)
+      }
+    }
+    // TODO: check for duplicate files
+    return slack ? slackFigma(msg, files) : simpleFigma(msg, files)
   })
 }
