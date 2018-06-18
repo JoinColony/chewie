@@ -5,7 +5,7 @@
 #   GOOGLE_CLUSTER_NAME
 version: 2
 jobs:
-  build-deploy:
+  build:
     docker:
       - image: google/cloud-sdk
     steps:
