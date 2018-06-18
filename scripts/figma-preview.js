@@ -13,6 +13,7 @@
 
 module.exports = (robot) => {
   const Figma = require('figma-js')
+  const { WebClient } = require('@slack/client')
   const figma = Figma.Client({
     personalAccessToken: process.env.HUBOT_FIGMA_TOKEN
   })
@@ -30,7 +31,7 @@ module.exports = (robot) => {
   const slackFigma = async (msg, files) => {
     for (let file of files) {
       await slack.chat.postMessage({
-        channel: msg.message.rawMessage.channel.id,
+        channel: msg.message.rawMessage.channel,
         attachments: [{
           fallback: `${file.name} on Figma ${file.thumbnailUrl}`,
           color: '#36a64f',
@@ -39,7 +40,7 @@ module.exports = (robot) => {
           image_url: file.thumbnailUrl,
           footer: 'Figma',
           footer_icon: 'https://static.figma.com/app/icon/1/favicon.png',
-          ts: Date.parse(file.lastModified) // to unixtime
+          ts: Math.round(Date.parse(file.lastModified) / 1000) // unixtime
         }]
       })
     }
