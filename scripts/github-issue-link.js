@@ -19,24 +19,37 @@
 
 module.exports = function(robot) {
   const github = require('githubot')(robot)
+  const issueRegex = /(\S*|^)?#(\d+)/g
   const ignoreUsers = 'github|hubot'
   const apiUrl = 'https://api.github.com'
 
-  robot.hear(/((\S*|^)?#(\d+)).*/, msg => {
-    const issue = msg.match[3]
-
-    if (msg.message.user.name.match(new RegExp(ignoreUsers, 'gi'))) return
-    if (isNaN(issue)) return
-
-    const repo = msg.match[2]
-      ? github.qualified_repo(msg.match[2])
-      : github.qualified_repo(process.env.HUBOT_GITHUB_REPO)
-
-    github.get(`${apiUrl}/repos/${repo}/issues/${issue}`, res => {
-      const title = res.title
-      const url = res.html_url
-      const type = res.pull_request ? "PR" : "Issue"
-      msg.send(`${type} ${issue}: ${title} ${url}`)
+  const getIssue = async (repo, issue) => {
+    return new Promise((resolve, reject) => {
+      github.get(`${apiUrl}/repos/${repo}/issues/${issue}`, res => {
+        resolve(res)
+      })
     })
+  }
+
+  robot.hear(issueRegex, async msg => {
+    let matches, response = ''
+    while (matches = issueRegex.exec(msg.message.text)) {
+      const issueNumber = matches[2]
+
+      if (msg.message.user.name.match(new RegExp(ignoreUsers, 'gi'))) break
+      if (isNaN(issueNumber)) break
+
+      const repo = matches[1]
+        ? github.qualified_repo(matches[1])
+        : github.qualified_repo(process.env.HUBOT_GITHUB_REPO)
+
+      const issue = await getIssue(repo, issueNumber)
+      const title = issue.title
+      const url = issue.html_url
+      const type = issue.pull_request ? "PR" : "Issue"
+
+      response += `${type} #${issueNumber}: ${title} ${url}\n`
+    }
+    msg.send(response.trim())
   })
 }
