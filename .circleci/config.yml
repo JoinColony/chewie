@@ -16,7 +16,7 @@ jobs:
           command: docker build -t eu.gcr.io/${GOOGLE_PROJECT_ID}/chewie-${CIRCLE_SHA1} .
       - run:
           name: Store Service Account
-          command: echo $GCLOUD_SERVICE_KEY > ${HOME}/gcloud-service-key.json
+          command: echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json
       - run:
           name: Set Google Cloud Config
           command: |
