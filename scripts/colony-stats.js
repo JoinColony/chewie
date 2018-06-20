@@ -31,8 +31,8 @@ module.exports = async (robot) => {
 
   const metaColonyClient = await networkClient.getMetaColonyClient()
 
-  robot.hear(/!colony ([0-9])*$/i, async msg => {
-    msg.send('Gathering data');
+  robot.hear(/!colony ([0-9]*)$/i, async msg => {
+    msg.send('Gathering data...');
     const { address } = await networkClient.getColony.call({ id: parseInt(msg.match[1], 10) })
     if (!address) {
       return msg.send("No such colony");
@@ -55,7 +55,7 @@ module.exports = async (robot) => {
   })
 
 
-  robot.hear(/!colony ([0-9])* task ([0-9])*$/i, async msg => {
+  robot.hear(/!colony ([0-9]*) task ([0-9]*)$/i, async msg => {
     msg.send('Gathering data...')
     const { address } = await networkClient.getColony.call({ id: parseInt(msg.match[1], 10) })
     const taskId = parseInt(msg.match[2], 10);
