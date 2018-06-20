@@ -11,7 +11,7 @@
   "dependencies": {
     "@colony/colony-contract-loader-network": "^1.0.1",
     "@colony/colony-js-adapter-ethers": "^1.4.1",
-    "@colony/colony-js-client": "^1.4.1",
+    "@colony/colony-js-client": "^1.5.1",
     "@slack/client": "^4.3.1",
     "env-cmd": "^8.0.2",
     "ethers": "^3.0.21",
