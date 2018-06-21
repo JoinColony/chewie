@@ -19,7 +19,7 @@
 
 module.exports = function(robot) {
   const github = require('githubot')(robot)
-  const issueRegex = /(\S*|^)?#(\d+)/g
+  const issueRegex = /([A-z0-9\-\.]*)?#(\d+)/g
   const ignoreUsers = 'github|hubot'
   const apiUrl = 'https://api.github.com'
 
@@ -32,8 +32,13 @@ module.exports = function(robot) {
   }
 
   robot.hear(issueRegex, async msg => {
-    let matches, response = ''
+    let matches, included = [], response = ''
     while (matches = issueRegex.exec(msg.message.text)) {
+      if (included.indexOf(matches[0]) === -1)
+        included.push(matches[0])
+      else
+        break
+
       const issueNumber = matches[2]
 
       if (msg.message.user.name.match(new RegExp(ignoreUsers, 'gi'))) break
