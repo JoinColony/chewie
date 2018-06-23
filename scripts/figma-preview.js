@@ -2,7 +2,7 @@
 //   Post Figma previews when linked
 //
 // Commands:
-//   https://www.figma.com/file/... - display a Figma preview
+//   !https://www.figma.com/file/... - display a Figma preview
 //
 // Dependencies:
 //   'figma-js': '1.3.x'
@@ -18,7 +18,7 @@ module.exports = (robot) => {
     personalAccessToken: process.env.HUBOT_FIGMA_TOKEN
   })
   const slack = robot.adapterName === 'slack' ? new WebClient(robot.adapter.options.token) : undefined
-  const fileRegex = /https:\/\/www.figma.com\/file\/([A-z0-9]*)\/?/g
+  const fileRegex = /!(https?:\/\/)?(www.)?figma.com\/file\/([A-z0-9]*)\/?/g
 
   const simpleFigma = async (msg, files) => {
     let response = ''
@@ -49,7 +49,7 @@ module.exports = (robot) => {
   robot.hear(fileRegex, async msg => {
     let matches, files = []
     while (matches = fileRegex.exec(msg.message.text)) {
-      const fileId = matches[1]
+      const fileId = matches[3]
       try {
         const file = await figma.file(fileId)
         file.url = matches[0]
