@@ -1,5 +1,6 @@
 [
   "hubot-diagnostics",
   "hubot-help",
-  "hubot-github-status"
+  "hubot-github-status",
+  "hubot-redis-brain"
 ]

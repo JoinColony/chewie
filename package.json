@@ -22,6 +22,7 @@
     "hubot-diagnostics": "0.0.2",
     "hubot-github-status": "^0.2.1",
     "hubot-help": "^0.2.2",
+    "hubot-redis-brain": "^0.0.4",
     "hubot-slack": "^4.4.0"
   },
   "engines": {
