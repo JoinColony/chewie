@@ -17,7 +17,8 @@ const CronJob = require('cron').CronJob
 const chrono = require('chrono-node')
 
 const BRAIN_PREFIX = 'standup'
-const { HUBOT_STANDUP_CHANNEL, HUBOT_SLACK_TOKEN } = process.env
+// This is the standup-testing channel. This should be an env variable at some point
+const HUBOT_STANDUP_CHANNEL = 'CBX6J6MAA'
 
 /* A few redis helpers */
 const getMap = (key, brain) => {
