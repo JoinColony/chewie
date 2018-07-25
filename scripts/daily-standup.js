@@ -3,7 +3,7 @@
 //   TODO
 //
 // Dependencies:
-//   'axios': '0.18.x'
+//   'cron': '1.3.x'
 //
 // Configuration:
 //
@@ -13,12 +13,13 @@
 // Author:
 //   chmanie
 
-const axios = require('axios')
+const CronJob = require('cron').CronJob
+const chrono = require('chrono-node')
 
 const BRAIN_PREFIX = 'standup'
 const { HUBOT_STANDUP_CHANNEL, HUBOT_SLACK_TOKEN } = process.env
 
-// A few redis helpers
+/* A few redis helpers */
 const getMap = (key, brain) => {
   return JSON.parse(brain.get(`${BRAIN_PREFIX}-${key}`)) || {}
 }
@@ -27,8 +28,14 @@ const setMap = (key, value, brain) => {
   return brain.set(`${BRAIN_PREFIX}-${key}`, JSON.stringify(value))
 }
 
+const removeMap = (key, brain) => {
+  return brain.remove(`${BRAIN_PREFIX}-${key}`)
+}
+
 const addToMap = (mapKey, key, value, brain) => {
   const map = getMap(mapKey, brain)
+  // Use incremental number if no key is given
+  key = key || Object.keys(map).length
   if (map[key]) {
     return false
   }
@@ -48,29 +55,61 @@ const removeFromMap = (mapKey, key, brain) => {
   setMap(mapKey, map, brain)
 }
 
-// Chat message helpers
+/* Chat message helpers */
 const isPrivateSlackMessage = res => res.message.room.startsWith('D')
-const isShellMessage = res => res.message.room === 'Shell'
 const isChannel = (res, channelId) => res.message.room === channelId
 
-// Date helpers
-const getUserTimezone = async user => {
-  const res = await axios.get(
-    `https://slack.com/api/users.info?token=${HUBOT_SLACK_TOKEN}&user=${
-      user.id
-    }`
-  )
-  return res.data.user.tz_offset / (60 * 60)
+/* Date helpers */
+const getOffsetDate = (offset, timestamp = Date.now()) => {
+  const d = new Date(timestamp + offset * 60 * 60 * 1000)
+  return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`
+}
+
+const getOffsetDay = offset => {
+  const d = new Date(Date.now() + offset * 60 * 60 * 1000)
+  return d.getUTCDay()
 }
 
 // Returns the current date for a specific user
-const getCurrentDate = async user => {
-  const offset = await getUserTimezone(user)
-  const d = new Date(Date.now() + offset * 60 * 60 * 1000)
-  return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`
+const getCurrentDateForUser = user => {
+  const offset = user.slack.tz_offset / (60 * 60)
+  return getOffsetDate(offset)
 }
 
-// User permission helpers
+const dateIsInRange = (dateStr, rangeStr) => {
+  const range = rangeStr.split('>')
+  const date = new Date(dateStr)
+  const start = new Date(range[0])
+  const end = new Date(range[1])
+  return start <= date && date <= end
+}
+
+const dateIsOlderThan = (dateOrRangeStr, refDate) => {
+  const date = dateOrRangeStr.includes('>') ? dateOrRangeStr.split('>')[1] : dateOrRangeStr
+  return new Date(date) <= new Date(refDate)
+}
+
+const parseNaturalDate = (expr, user) => {
+  const referenceDate = new Date(`${getCurrentDateForUser(user)} 11:00Z`)
+  const parsed = chrono.parse(expr, referenceDate, { forwardDate: true })
+  const { start } = parsed[0]
+  let end
+  if (parsed.length == 2) {
+    end = parsed[1].start
+  } else {
+    end = parsed[0].end
+  }
+  const dateStart = `${start.get('year')}-${start.get('month')}-${start.get(
+    'day'
+  )}`
+  if (end) {
+    const dateEnd = `${end.get('year')}-${end.get('month')}-${end.get('day')}`
+    return `${dateStart}>${dateEnd}`
+  }
+  return dateStart
+}
+
+/* User permission helpers */
 const getUser = (userId, brain) => {
   return getFromMap('users', userId, brain)
 }
@@ -79,6 +118,7 @@ const addUserWithRole = (user, role, brain) => {
   return addToMap(`${role}s`, user.id, user, brain)
 }
 
+// Returns true if no admins exist yet
 const noAdmins = brain => {
   const admins = getMap('admins', brain)
   if (!Object.keys(admins).length) {
@@ -103,24 +143,101 @@ const getUserList = map => {
     .join('\n')
 }
 
-module.exports = robot => {
+const isUserExcusedToday = (user, date, brain) => {
+  const map = getMap(`excuses-${user.id}`, brain)
+  const excuses = Object.keys(map)
+  for (let i = 0; i < excuses.length; i++) {
+    if (excuses[i] === date) return true
+    if (excuses[i].includes('>') && dateIsInRange(date, excuses[i])) return true
+  }
+  console.log('user is not excused today')
+  return false
+}
+
+const hasUserDoneAStandupToday = (user, date, brain) => {
+  const standups = getMap(date, brain)
+  return Object.keys(standups).indexOf(user.id) > -1
+}
+
+const checkStandupsDone = robot => {
   const { brain } = robot
+  // FIXME: uncomment the getOffsetDate for pacific
+  // const date = getOffsetDate(-11)
+  // const day = getOffsetDay(-11)
+  const date = getOffsetDate(0)
+  const day = getOffsetDay(0)
+  const standuppers = Object.values(getMap('standuppers', brain))
+  const usersToShame = standuppers
+    // The workdays have to be connected (i.e. not separated by a weekend), for now
+    // Users who had to post a standup today
+    .filter(user => user.workDays[0] <= day && user.workDays[1] >= day)
+    // Users who are not excused for today
+    .filter(user => !isUserExcusedToday(user, date, brain))
+    // Users who have not posted a standup
+    .filter(user => !hasUserDoneAStandupToday(user, date, brain))
+  console.log(usersToShame)
+  robot.messageRoom(
+    HUBOT_STANDUP_CHANNEL,
+    `You forgot the standup today:\n` +
+      usersToShame.map(user => `@${user.name}`).join(', ')
+  )
+  // TODO: Make it possible to add a quirky phrase
+}
+
+const cleanUpExcuses = brain => {
+  const today = getOffsetDate(0)
+  const standuppers = Object.keys(getMap('standuppers', brain))
+  standuppers.forEach(userId => {
+    const excuses = Object.keys(getMap(`excuses-${userId}`, brain))
+    excuses.forEach(excuse => {
+      if (dateIsOlderThan(excuse, today)) {
+        removeFromMap(`excuses-${userId}`, excuse, brain)
+      }
+    })
+  })
+}
+
+const setupCronJob = brain => {
+  const job = new CronJob({
+    // Every weekday 23:45h
+    cronTime: '00 45 23 * * 1-5',
+    onTick: () => {
+      checkStandupsDone(brain)
+      cleanUpExcuses(brain)
+    },
+    start: false,
+    // Last time zone of the day (UTC-11)
+    timeZone: 'Pacific/Niue'
+  })
+  job.start()
+}
+
+module.exports = robot => {
+  const { brain, messageRoom } = robot
+  setupCronJob(robot)
+
   // FIXME: remove these lines
   let done = false
   brain.on('loaded', () => {
     if (done) return
-    brain.remove(`${BRAIN_PREFIX}-admins`, '{}')
-    brain.remove(`${BRAIN_PREFIX}-standuppers`, '{}')
+    brain.remove(`${BRAIN_PREFIX}-admins`)
+    brain.remove(`${BRAIN_PREFIX}-standuppers`)
+    const date = getOffsetDate(0)
+    brain.remove(`${BRAIN_PREFIX}-${date}`)
     done = true
   })
 
-  robot.hear('standup add', async res => {
-    if (!isPrivateSlackMessage(res) && !isShellMessage(res)) return
-    const timezoneOffset = await getUserTimezone(res.message.user)
-    if (timezoneOffset == null) {
+  robot.hear(/standup add ([1-5])-([1-5])/, async res => {
+    const { message, match } = res
+    if (!isPrivateSlackMessage(res)) return
+    if (message.user.slack.tz_offset == null) {
       return res.send('Please set your time zone in slack first')
     }
-    if (addUserWithRole(res.message.user, 'standupper', brain)) {
+    const user = {
+      ...message.user,
+      workDays: [parseInt(match[1], 10), parseInt(match[2], 10)]
+    }
+    if (addUserWithRole(user, 'standupper', brain)) {
       res.send(
         `I added you to the daily-standup list! Hoping for you to not forget to post it 🤞🏽`
       )
@@ -133,7 +250,7 @@ module.exports = robot => {
 
   robot.hear(/standup admin add (.+)/, res => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) && !isShellMessage(res)) return
+    if (!isPrivateSlackMessage(res)) return
     if (!noAdmins(brain) && !isAdmin(user, brain)) return
     const userToAdd =
       res.match[1] === 'me' ? user : getUser(res.match[1], brain)
@@ -145,11 +262,10 @@ module.exports = robot => {
     )
   })
 
-  robot.hear('standup admin standups', async res => {
+  robot.hear('standup admin liststandups', async res => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) && !isShellMessage(res)) return
-    if (!isAdmin(user, brain)) return
-    const date = await getCurrentDate(res.message.user)
+    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    const date = await getCurrentDateForUser(res.message.user)
     const standups = getMap(date, brain)
     const users = getMap('standuppers', brain)
     const mapKeyToUser = key => (users[key] ? users[key].name : key)
@@ -159,10 +275,9 @@ module.exports = robot => {
     res.send(msg)
   })
 
-  robot.hear('standup admin users', res => {
+  robot.hear('standup admin listusers', res => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) && !isShellMessage(res)) return
-    if (!isAdmin(user, brain)) return
+    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
     const standuppers = getMap('standuppers', brain)
     const admins = getMap('admins', brain)
 
@@ -172,11 +287,49 @@ module.exports = robot => {
     res.send(msg)
   })
 
-  // robot.hear(/.+/, async res => {
-  //   const { user } = res.message
-  //   if (!isChannel(res, HUBOT_STANDUP_CHANNEL)) return
-  //   if (!isStandupper(user, brain)) return
-  //   const date = await getCurrentDate(user)
-  //   addToMap(date, res.message.user.id, true, brain)
-  // })
+  robot.hear(/standup admin removeuser (.+)/, res => {
+    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    const userId = res.match[1]
+    removeFromMap('standuppers', userId)
+    removeMap(`excuses-${userId}`)
+  })
+
+  // Listen to everything in standup channel? Not clear yet
+  robot.hear('daily-standup', async res => {
+    const { user } = res.message
+    if (!isChannel(res, HUBOT_STANDUP_CHANNEL) || !isStandupper(user, brain)) return
+    const date = await getCurrentDateForUser(user)
+    addToMap(date, res.message.user.id, true, brain)
+    console.log('added standup')
+  })
+
+  robot.hear(/standup excuse add (.+)/, res => {
+    const { user } = res.message
+    if (!isPrivateSlackMessage(res) || !isStandupper(user, brain)) return
+    const excuseDateStr = parseNaturalDate(res.match[1], user)
+    addToMap(`excuses-${user.id}`, excuseDateStr, true, brain)
+  })
+
+  robot.hear(/standup excuse remove ([\d\->]+)/, res => {
+    const { user } = res.message
+    if (!isPrivateSlackMessage(res) || !isStandupper(user, brain)) return
+    removeFromMap(`excuses-${user.id}`, res.match[1], brain)
+  })
+
+  robot.hear('standup excuse list', res => {
+    const { user } = res.message
+    if (!isPrivateSlackMessage(res) || !isStandupper(user, brain)) return
+    const map = getMap(`excuses-${user.id}`, brain)
+    const excuses = Object.keys(map)
+      .map(excuse => `• ${excuse}`)
+      .join('\n')
+    res.send(excuses)
+  })
+
+  // FIXME: remove this is for debugging
+  robot.hear('blame', res => {
+    if (!isPrivateSlackMessage(res)) return
+    checkStandupsDone(robot)
+    cleanUpExcuses(robot.brain)
+  })
 }
