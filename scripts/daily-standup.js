@@ -35,7 +35,7 @@ const removeMap = (key, brain) => {
 const addToMap = (mapKey, key, value, brain) => {
   const map = getMap(mapKey, brain)
   // Use incremental number if no key is given
-  key = key || Object.keys(map).length
+  key = key || Object.keys(map).length + 1
   if (map[key]) {
     return false
   }
@@ -85,7 +85,9 @@ const dateIsInRange = (dateStr, rangeStr) => {
 }
 
 const dateIsOlderThan = (dateOrRangeStr, refDate) => {
-  const date = dateOrRangeStr.includes('>') ? dateOrRangeStr.split('>')[1] : dateOrRangeStr
+  const date = dateOrRangeStr.includes('>')
+    ? dateOrRangeStr.split('>')[1]
+    : dateOrRangeStr
   return new Date(date) <= new Date(refDate)
 }
 
@@ -150,7 +152,6 @@ const isUserExcusedToday = (user, date, brain) => {
     if (excuses[i] === date) return true
     if (excuses[i].includes('>') && dateIsInRange(date, excuses[i])) return true
   }
-  console.log('user is not excused today')
   return false
 }
 
@@ -161,11 +162,8 @@ const hasUserDoneAStandupToday = (user, date, brain) => {
 
 const checkStandupsDone = robot => {
   const { brain } = robot
-  // FIXME: uncomment the getOffsetDate for pacific
-  // const date = getOffsetDate(-11)
-  // const day = getOffsetDay(-11)
-  const date = getOffsetDate(0)
-  const day = getOffsetDay(0)
+  const date = getOffsetDate(-11)
+  const day = getOffsetDay(-11)
   const standuppers = Object.values(getMap('standuppers', brain))
   const usersToShame = standuppers
     // The workdays have to be connected (i.e. not separated by a weekend), for now
@@ -175,13 +173,31 @@ const checkStandupsDone = robot => {
     .filter(user => !isUserExcusedToday(user, date, brain))
     // Users who have not posted a standup
     .filter(user => !hasUserDoneAStandupToday(user, date, brain))
-  console.log(usersToShame)
+  const phrases = Object.values(getMap('phrases', brain))
+  const randomIdx = Math.floor(Math.random() * phrases.length)
+  const randomPhrase = phrases[randomIdx]
+  if (!usersToShame.length) {
+    return robot.messageRoom(
+      HUBOT_STANDUP_CHANNEL,
+      'Everyone did their standups yesterday! That makes me a very happy Wookiee!'
+    )
+  }
+  if (usersToShame.length === 1) {
+    return robot.messageRoom(
+      HUBOT_STANDUP_CHANNEL,
+      `Only @${
+        usersToShame[0].name
+      } forgot to do their standup yesterday. ${randomPhrase}`
+    )
+  }
+  const lastUser = usersToShame.pop()
   robot.messageRoom(
     HUBOT_STANDUP_CHANNEL,
-    `You forgot the standup today:\n` +
-      usersToShame.map(user => `@${user.name}`).join(', ')
+    usersToShame.map(user => `@${user.name}`).join(', ') +
+      ` and @${
+        lastUser.name
+      } did not do their standups yesterday. ${randomPhrase}`
   )
-  // TODO: Make it possible to add a quirky phrase
 }
 
 const cleanUpExcuses = brain => {
@@ -216,16 +232,16 @@ module.exports = robot => {
   const { brain, messageRoom } = robot
   setupCronJob(robot)
 
-  // FIXME: remove these lines
-  let done = false
-  brain.on('loaded', () => {
-    if (done) return
-    brain.remove(`${BRAIN_PREFIX}-admins`)
-    brain.remove(`${BRAIN_PREFIX}-standuppers`)
-    const date = getOffsetDate(0)
-    brain.remove(`${BRAIN_PREFIX}-${date}`)
-    done = true
-  })
+  // These lines are for debugging. Please leave in and commented for now
+  // let done = false
+  // brain.on('loaded', () => {
+  //   if (done) return
+  //   brain.remove(`${BRAIN_PREFIX}-admins`)
+  //   brain.remove(`${BRAIN_PREFIX}-standuppers`)
+  //   const date = getOffsetDate(0)
+  //   brain.remove(`${BRAIN_PREFIX}-${date}`)
+  //   done = true
+  // })
 
   robot.hear(/standup add ([1-5])-([1-5])/, async res => {
     const { message, match } = res
@@ -262,7 +278,7 @@ module.exports = robot => {
     )
   })
 
-  robot.hear('standup admin liststandups', async res => {
+  robot.hear('standup admin standup list', async res => {
     const { user } = res.message
     if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
     const date = await getCurrentDateForUser(res.message.user)
@@ -275,61 +291,108 @@ module.exports = robot => {
     res.send(msg)
   })
 
-  robot.hear('standup admin listusers', res => {
+  robot.hear('standup admin user list', res => {
     const { user } = res.message
     if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
     const standuppers = getMap('standuppers', brain)
     const admins = getMap('admins', brain)
-
     const msg = `Standuppers:\n${getUserList(
       standuppers
     )}\nAdmins:\n${getUserList(admins)}`
     res.send(msg)
   })
 
-  robot.hear(/standup admin removeuser (.+)/, res => {
+  robot.hear(/standup admin user remove (.+)/, res => {
+    const { user } = res.message
     if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
     const userId = res.match[1]
     removeFromMap('standuppers', userId)
     removeMap(`excuses-${userId}`)
+    res.send(`User with id ${userId} removed`)
+  })
+
+  robot.hear(/standup admin phrase add (.+)/, res => {
+    const { user } = res.message
+    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    addToMap('phrases', null, res.match[1], brain)
+    res.send('OK, I added this phrase')
+  })
+
+  robot.hear('standup admin phrase list', res => {
+    const { user } = res.message
+    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    const map = getMap('phrases', brain)
+    const phrases = Object.entries(map).map(
+      ([key, phrase]) => `${key} - "${phrase}"`
+    )
+    if (!phrases.length) {
+      return res.send('No amusing scornful remarks found')
+    }
+    res.send(
+      `I will pick one of the following amusing scornful remarks randomly:\n${phrases.join(
+        '\n'
+      )}`
+    )
+  })
+
+  robot.hear(/standup admin phrase remove (\d+)/, res => {
+    const { user } = res.message
+    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    removeFromMap('phrases', res.match[1], brain)
+    res.send(`OK, I removed the phrase with id ${res.match[1]}`)
   })
 
   // Listen to everything in standup channel? Not clear yet
   robot.hear('daily-standup', async res => {
     const { user } = res.message
-    if (!isChannel(res, HUBOT_STANDUP_CHANNEL) || !isStandupper(user, brain)) return
+    if (!isChannel(res, HUBOT_STANDUP_CHANNEL) || !isStandupper(user, brain)) {
+      return
+    }
     const date = await getCurrentDateForUser(user)
     addToMap(date, res.message.user.id, true, brain)
-    console.log('added standup')
   })
 
   robot.hear(/standup excuse add (.+)/, res => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isStandupper(user, brain)) return
+    if (isPrivateSlackMessage(res)) {
+      return res.send(
+        'An excuse has to be publicly requested in the standup channel'
+      )
+    }
+    if (!isChannel(res, HUBOT_STANDUP_CHANNEL) || !isStandupper(user, brain)) {
+      return
+    }
     const excuseDateStr = parseNaturalDate(res.match[1], user)
     addToMap(`excuses-${user.id}`, excuseDateStr, true, brain)
+    res.send(`OK, you will be excused at ${excuseDateStr}`)
   })
 
   robot.hear(/standup excuse remove ([\d\->]+)/, res => {
     const { user } = res.message
     if (!isPrivateSlackMessage(res) || !isStandupper(user, brain)) return
     removeFromMap(`excuses-${user.id}`, res.match[1], brain)
+    res.send(`OK, I removed this excuse: ${res.match[1]}`)
   })
 
   robot.hear('standup excuse list', res => {
     const { user } = res.message
     if (!isPrivateSlackMessage(res) || !isStandupper(user, brain)) return
     const map = getMap(`excuses-${user.id}`, brain)
-    const excuses = Object.keys(map)
-      .map(excuse => `• ${excuse}`)
-      .join('\n')
-    res.send(excuses)
+    const excuses = Object.keys(map).map(excuse => `• ${excuse}`)
+    if (!excuses.length) {
+      return res.send('No excuses found! 🤙')
+    }
+    res.send(
+      `OK, here's a list of all the days where you don't need to do your standup:\n${excuses.join(
+        '\n'
+      )}`
+    )
   })
 
-  // FIXME: remove this is for debugging
-  robot.hear('blame', res => {
-    if (!isPrivateSlackMessage(res)) return
-    checkStandupsDone(robot)
-    cleanUpExcuses(robot.brain)
-  })
+  // These lines are for debugging. Please leave in and commented for now
+  // robot.hear('blame', res => {
+  //   if (!isPrivateSlackMessage(res)) return
+  //   checkStandupsDone(robot)
+  //   cleanUpExcuses(robot.brain)
+  // })
 }
