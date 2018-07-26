@@ -272,7 +272,7 @@ module.exports = robot => {
     const userToAdd =
       res.match[1] === 'me' ? user : getUser(res.match[1], brain)
     if (userToAdd && addUserWithRole(userToAdd, 'admin', brain)) {
-      return res.send(`I added ${user.name} as an admin. Have fun!`)
+      return res.send(`I added ${userToAdd.name} as an admin. Have fun!`)
     }
     return res.send(
       'Could not add user as an admin. Maybe they do not exist or are already admin?'
@@ -343,14 +343,14 @@ module.exports = robot => {
     res.send(`OK, I removed the phrase with id ${res.match[1]}`)
   })
 
-  // Listen to everything in standup channel? Not clear yet
-  robot.hear('daily-standup', async res => {
+  robot.hear(/[Dd][Aa][Ii][Ll][Yy][\-\s\_]?[Ss][Tt][Aa][Nn][Dd][Uu][Pp]/g, async res => {
     const { user } = res.message
     if (!isChannel(res, HUBOT_STANDUP_CHANNEL) || !isStandupper(user, brain)) {
       return
     }
     const date = await getCurrentDateForUser(user)
     addToMap(date, res.message.user.id, true, brain)
+    robot.emit('slack.reaction', { message: res.message, name: 'chewie' })
   })
 
   robot.hear(/standup excuse add (.+)/, res => {
