@@ -114,7 +114,7 @@ const parseNaturalDate = (expr, user) => {
 
 /* User permission helpers */
 const getUser = (userId, brain) => {
-  return getFromMap('users', userId, brain)
+  return getFromMap('standuppers', userId, brain)
 }
 
 const addUserWithRole = (user, role, brain) => {
