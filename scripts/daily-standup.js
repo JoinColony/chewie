@@ -343,7 +343,8 @@ module.exports = robot => {
     res.send(`OK, I removed the phrase with id ${res.match[1]}`)
   })
 
-  robot.hear(/[Dd][Aa][Ii][Ll][Yy][\-\s\_]?[Ss][Tt][Aa][Nn][Dd][Uu][Pp]/g, async res => {
+  // At least 3 bold lines with another line following that
+  robot.hear(/(\*.+?\*.*(\r\n|\r|\n)(.*(\r\n|\r|\n))*?){3,}/, async res => {
     const { user } = res.message
     if (!isChannel(res, HUBOT_STANDUP_CHANNEL) || !isStandupper(user, brain)) {
       return
