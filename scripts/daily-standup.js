@@ -45,6 +45,16 @@ const addToMap = (mapKey, key, value, brain) => {
   return true
 }
 
+const updateMap = (mapKey, key, value, brain) => {
+  const map = getMap(mapKey, brain)
+  if (!key || !map[key]) {
+    return false
+  }
+  map[key] = value
+  setMap(mapKey, map, brain)
+  return true
+}
+
 const getFromMap = (mapKey, key, brain) => {
   const map = getMap(mapKey, brain)
   return map[key]
@@ -199,6 +209,41 @@ const checkStandupsDone = robot => {
         lastUser.name
       } did not do their standups yesterday. ${randomPhrase}`
   )
+
+  // Zero users that deserve it on the leaderboard.
+  usersToShame.forEach(user => {
+    user.currentCount = 0
+    if (user.allTimeMissed) {
+      user.allTimeMissed += 1
+    } else {
+      user.allTimeMissed = 1
+    }
+    updateMap('standuppers', user.id, user, brain)
+  })
+
+  const usersToIncrementOnLeaderboard = standuppers
+    // Users who had to post a standup today
+    .filter(user => user.workDays[0] <= day && user.workDays[1] >= day)
+    // Users who are not excused for today
+    .filter(user => !isUserExcusedToday(user, date, brain))
+    // Users who have posted a standup
+    .filter(user => hasUserDoneAStandupToday(user, date, brain))
+    .forEach(user => {
+      if (!user.currentCount) {
+        user.currentCount = 1
+        user.personalBest = 1
+        user.allTimeCount = 1
+        user.allTimeMissed = 0
+      } else {
+        user.currentCount += 1
+        user.allTimeCount += 1
+        if (!user.personalBest || user.currentCount > user.personalBest) {
+          user.personalBest = user.currentCount
+        }
+      }
+
+      updateMap('standuppers', user.id, user, brain)
+    })
 }
 
 const cleanUpExcuses = brain => {
@@ -397,4 +442,24 @@ module.exports = robot => {
   //   checkStandupsDone(robot)
   //   cleanUpExcuses(robot.brain)
   // })
+
+  robot.hear('standup leaderboard', res => {
+    if (!isPrivateSlackMessage(res)) return
+    const standuppers = Object.values(getMap('standuppers', brain)).sort(
+      (a, b) => a.currentCount < b.currentCount
+    )
+    let rank = 1
+    let output = '*Number of days without missing a standup*\n'
+    let rankScore = standuppers[0].currentCount
+    standuppers.forEach(user => {
+      if (rankScore != user.currentCount) {
+        rank += 1
+        rankScore = user.currentCount
+      }
+      output += `${rank}. ${brain.userForId(user.id).name} -- ${
+        user.currentCount
+      }\n`
+    })
+    res.send(output)
+  })
 }
