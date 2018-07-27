@@ -18,7 +18,7 @@ const chrono = require('chrono-node')
 
 const BRAIN_PREFIX = 'standup'
 // This is the standup-testing channel. This should be an env variable at some point
-const HUBOT_STANDUP_CHANNEL = 'CBX6J6MAA'
+const HUBOT_STANDUP_CHANNEL = 'C0NFZA7T5'
 
 /* A few redis helpers */
 const getMap = (key, brain) => {
@@ -150,10 +150,16 @@ const isStandupper = (user, brain) => {
   return !!standuppers[user.id]
 }
 
-const getUserList = map => {
-  return Object.values(map)
-    .map(user => `• ${user.name} (${user.id})`)
+const getUserList = (map, brain) => {
+  const users = getMap(map, brain)
+  return Object.values(users)
+    .map(user => `• ${getUserName(user, brain)} (${user.id})`)
     .join('\n')
+}
+
+const getUserName = (userToFind, brain) => {
+  const user = brain.userForId(userToFind.id)
+  return user ? user.name : userToFind.id
 }
 
 const isUserExcusedToday = (user, date, brain) => {
@@ -196,18 +202,20 @@ const checkStandupsDone = robot => {
   if (usersToShame.length === 1) {
     return robot.messageRoom(
       HUBOT_STANDUP_CHANNEL,
-      `Only @${
-        usersToShame[0].name
-      } forgot to do their standup yesterday. ${randomPhrase}`
+      `Only @${getUserName(
+        usersToShame[0],
+        brain
+      )} forgot to do their standup yesterday. ${randomPhrase}`
     )
   }
   const lastUser = usersToShame.pop()
   robot.messageRoom(
     HUBOT_STANDUP_CHANNEL,
-    usersToShame.map(user => `@${user.name}`).join(', ') +
-      ` and @${
-        lastUser.name
-      } did not do their standups yesterday. ${randomPhrase}`
+    usersToShame.map(user => `@${getUserName(user, brain)}`).join(', ') +
+      ` and @${getUserName(
+        lastUser,
+        brain
+      )} did not do their standups yesterday. ${randomPhrase}`
   )
 
   // Zero users that deserve it on the leaderboard.
@@ -241,7 +249,6 @@ const checkStandupsDone = robot => {
           user.personalBest = user.currentCount
         }
       }
-
       updateMap('standuppers', user.id, user, brain)
     })
 }
@@ -296,8 +303,12 @@ module.exports = robot => {
       return res.send('Please set your time zone in slack first')
     }
     const user = {
-      ...message.user,
-      workDays: [parseInt(match[1], 10), parseInt(match[2], 10)]
+      id: message.user.id,
+      workDays: [parseInt(match[1], 10), parseInt(match[2], 10)],
+      currentCount: 1,
+      personalBest: 1,
+      allTimeCount: 1,
+      allTimeMissed: 0,
     }
     if (addUserWithRole(user, 'standupper', brain)) {
       res.send(
@@ -317,20 +328,23 @@ module.exports = robot => {
     const userToAdd =
       res.match[1] === 'me' ? user : getUser(res.match[1], brain)
     if (userToAdd && addUserWithRole(userToAdd, 'admin', brain)) {
-      return res.send(`I added ${userToAdd.name} as an admin. Have fun!`)
+      return res.send(
+        `I added ${getUserName(userToAdd, brain)} as an admin. Have fun!`
+      )
     }
     return res.send(
       'Could not add user as an admin. Maybe they do not exist or are already admin?'
     )
   })
 
-  robot.hear('standup admin standup list', async res => {
+  robot.hear('standup admin standup list', res => {
     const { user } = res.message
     if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
-    const date = await getCurrentDateForUser(res.message.user)
+    const date = getCurrentDateForUser(res.message.user)
     const standups = getMap(date, brain)
     const users = getMap('standuppers', brain)
-    const mapKeyToUser = key => (users[key] ? users[key].name : key)
+    const mapKeyToUser = key =>
+      users[key] ? getUserName(users[key], brain) : key
     const msg = `Standups today: ${Object.keys(standups)
       .map(mapKeyToUser)
       .join(', ')}`
@@ -340,11 +354,10 @@ module.exports = robot => {
   robot.hear('standup admin user list', res => {
     const { user } = res.message
     if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
-    const standuppers = getMap('standuppers', brain)
-    const admins = getMap('admins', brain)
     const msg = `Standuppers:\n${getUserList(
-      standuppers
-    )}\nAdmins:\n${getUserList(admins)}`
+      'standuppers',
+      brain
+    )}\nAdmins:\n${getUserList('admins', brain)}`
     res.send(msg)
   })
 
@@ -389,12 +402,12 @@ module.exports = robot => {
   })
 
   // At least 3 bold lines with another line following that
-  robot.hear(/(\*.+?\*.*(\r\n|\r|\n)(.*(\r\n|\r|\n))*?){3,}/, async res => {
+  robot.hear(/(\*.+?\*.*(\r\n|\r|\n)(.*(\r\n|\r|\n))*?){3,}/, res => {
     const { user } = res.message
     if (!isChannel(res, HUBOT_STANDUP_CHANNEL) || !isStandupper(user, brain)) {
       return
     }
-    const date = await getCurrentDateForUser(user)
+    const date = getCurrentDateForUser(user)
     addToMap(date, res.message.user.id, true, brain)
     robot.emit('slack.reaction', { message: res.message, name: 'chewie' })
   })
@@ -456,9 +469,7 @@ module.exports = robot => {
         rank += 1
         rankScore = user.currentCount
       }
-      output += `${rank}. ${brain.userForId(user.id).name} -- ${
-        user.currentCount
-      }\n`
+      output += `${rank}. ${getUserName(user, brain)} -- ${user.currentCount}\n`
     })
     res.send(output)
   })
