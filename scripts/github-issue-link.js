@@ -37,7 +37,7 @@ module.exports = function(robot) {
       if (included.indexOf(matches[0]) === -1)
         included.push(matches[0])
       else
-        break
+        continue
 
       const issueNumber = matches[2]
 
