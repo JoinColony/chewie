@@ -253,7 +253,8 @@ const checkStandupsDone = robot => {
     })
 }
 
-const cleanUpExcuses = brain => {
+const cleanUpExcuses = robot => {
+  const { brain } = robot
   const today = getOffsetDate(0)
   const standuppers = Object.keys(getMap('standuppers', brain))
   standuppers.forEach(userId => {
@@ -266,13 +267,13 @@ const cleanUpExcuses = brain => {
   })
 }
 
-const setupCronJob = brain => {
+const setupCronJob = robot => {
   const job = new CronJob({
     // Every weekday 23:45h
     cronTime: '00 45 23 * * 1-5',
     onTick: () => {
-      checkStandupsDone(brain)
-      cleanUpExcuses(brain)
+      checkStandupsDone(robot)
+      cleanUpExcuses(robot)
     },
     start: false,
     // Last time zone of the day (UTC-11)
@@ -308,7 +309,7 @@ module.exports = robot => {
       currentCount: 1,
       personalBest: 1,
       allTimeCount: 1,
-      allTimeMissed: 0,
+      allTimeMissed: 0
     }
     if (addUserWithRole(user, 'standupper', brain)) {
       res.send(
