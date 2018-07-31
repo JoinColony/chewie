@@ -460,7 +460,7 @@ module.exports = robot => {
   robot.hear('standup leaderboard', res => {
     if (!isPrivateSlackMessage(res)) return
     const standuppers = Object.values(getMap('standuppers', brain)).sort(
-      (a, b) => a.currentCount < b.currentCount
+      (a, b) => b.currentCount - a.currentCount
     )
     let rank = 1
     let output = '*Number of days without missing a standup*\n'
