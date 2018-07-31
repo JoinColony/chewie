@@ -208,10 +208,11 @@ const checkStandupsDone = robot => {
       )} forgot to do their standup yesterday. ${randomPhrase}`
     )
   }
-  const lastUser = usersToShame.pop()
+  const displayUsers = usersToShame.slice()
+  const lastUser = displayUsers.pop()
   robot.messageRoom(
     HUBOT_STANDUP_CHANNEL,
-    usersToShame.map(user => `@${getUserName(user, brain)}`).join(', ') +
+    displayUsers.map(user => `@${getUserName(user, brain)}`).join(', ') +
       ` and @${getUserName(
         lastUser,
         brain
