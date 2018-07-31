@@ -177,6 +177,43 @@ const hasUserDoneAStandupToday = (user, date, brain) => {
   return Object.keys(standups).indexOf(user.id) > -1
 }
 
+// Generates and returns the leaderboard. If rerank is passed as true, the users'q most-recent-official-rankings
+// will be updated.
+const getLeaderboard = (rerank, brain) => {
+  const standuppers = Object.values(getMap('standuppers', brain)).sort(
+    (a, b) => b.currentCount - a.currentCount
+  )
+  let rank = 1
+  let output = '*Number of days without missing a standup*\n'
+  let rankScore = standuppers[0].currentCount
+  standuppers.forEach(user => {
+    if (rankScore != user.currentCount) {
+      rank += 1
+      rankScore = user.currentCount
+    }
+    lastOfficialRank = user.lastOfficialRank
+    let movement
+    if (!lastOfficialRank) {
+      movement = '*️⃣'
+    } else if (lastOfficialRank > rank) {
+      movement = '🔼'
+    } else if (lastOfficialRank == rank) {
+      movement = '▶️'
+    } else {
+      movement = '🔽'
+    }
+    output += `${rank} (${movement}) ${getUserName(user, brain)} -- ${
+      user.currentCount
+    }\n`
+    if (rerank) {
+      user.lastOfficialRank = rank
+      updateMap('standuppers', user.id, user, brain)
+    }
+  })
+
+  return output
+}
+
 const checkStandupsDone = robot => {
   const { brain } = robot
   const date = getOffsetDate(-11)
@@ -253,10 +290,10 @@ const checkStandupsDone = robot => {
       updateMap('standuppers', user.id, user, brain)
     })
 
-  if (day==1){
+  if (day == 1) {
     // On mondays, update and announce the official leaderboard
     // Doing this check here rather than in its own weekly cronjob to avoid race conditions
-    const leaderboard = getLeaderboard(true);
+    const leaderboard = getLeaderboard(true, brain)
     robot.messageRoom(HUBOT_STANDUP_CHANNEL, leaderboard)
   }
 }
@@ -288,41 +325,6 @@ const setupCronJob = robot => {
     timeZone: 'Pacific/Niue'
   })
   job.start()
-}
-
-// Generates and returns the leaderboard. If rerank is passed as true, the users'q most-recent-official-rankings
-// will be updated.
-getLeaderboard(rerank){
-  const standuppers = Object.values(getMap('standuppers', brain)).sort(
-    (a, b) => b.currentCount - a.currentCount
-  )
-  let rank = 1
-  let output = '*Number of days without missing a standup*\n'
-  let rankScore = standuppers[0].currentCount
-  standuppers.forEach(user => {
-    if (rankScore != user.currentCount) {
-      rank += 1
-      rankScore = user.currentCount
-    }
-    lastOfficialRank = user.lastOfficialRank;
-    let movement;
-    if (!lastOfficialRank){
-      movement = "*️⃣";
-    } else if (lastOfficialRank > rank) {
-      movement = "🔼"
-    } else if (lastOfficialRank == rank) {
-      movement = "▶️"
-    } else {
-      movement = "🔽"
-    }
-    output += `${rank} (${movement}) ${getUserName(user, brain)} -- ${user.currentCount}\n`
-    if (rerank) {
-      user.lastOfficialRank = rank;
-      updateMap('standuppers', user.id, user, brain)
-    }
-  })
-
-  return output;
 }
 
 module.exports = robot => {
@@ -501,8 +503,9 @@ module.exports = robot => {
   // })
 
   robot.hear('standup leaderboard', res => {
-    if (!isPrivateSlackMessage(res)) return
-    const output = getLeaderboard(false);
+    const { user } = res.message
+    if (!isPrivateSlackMessage(res) || !isStandupper(user, brain)) return
+    const output = getLeaderboard(false, brain)
     res.send(output)
   })
 }
