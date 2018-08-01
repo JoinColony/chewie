@@ -184,12 +184,13 @@ const getLeaderboard = (rerank, brain) => {
     (a, b) => b.currentCount - a.currentCount
   )
   let rank = 1
-  let output = '*Number of days without missing a standup*\n'
+  let output = '*Number of standups since each person last missed one*\n'
   let rankScore = standuppers[0].currentCount
   standuppers.forEach(user => {
     if (rankScore != user.currentCount) {
       rank += 1
       rankScore = user.currentCount
+      output += "=============================\n"
     }
     lastOfficialRank = user.lastOfficialRank
     let movement
@@ -202,7 +203,7 @@ const getLeaderboard = (rerank, brain) => {
     } else {
       movement = '🔽'
     }
-    output += `${rank} (${movement}) ${getUserName(user, brain)} -- ${
+    output += `${rank}. ${movement} ${getUserName(user, brain)} -- ${
       user.currentCount
     }\n`
     if (rerank) {
