@@ -162,6 +162,16 @@ const getUserName = (userToFind, brain) => {
   return user ? user.name : userToFind.id
 }
 
+const nobodyHadToWorkToday = (users, day) => {
+  for (let i = 0; i < users.length; i++) {
+    const user = users[i];
+    if (user && user.workDays[0] <= day && user.workDays[1] >= day) {
+      return false;
+    }
+  }
+  return true;
+}
+
 const isUserExcusedToday = (user, date, brain) => {
   const map = getMap(`excuses-${user.id}`, brain)
   const excuses = Object.keys(map)
@@ -220,6 +230,11 @@ const checkStandupsDone = robot => {
   const date = getOffsetDate(-11)
   const day = getOffsetDay(-11)
   const standuppers = Object.values(getMap('standuppers', brain))
+
+  if (nobodyHadToWorkToday(standuppers, day)) {
+    return robot.messageRoom(HUBOT_STANDUP_CHANNEL, 'Yesterday was a free day for everyone! Hope you enjoyed it 🏝')
+  }
+
   const usersToShame = standuppers
     // The workdays have to be connected (i.e. not separated by a weekend), for now
     // Users who had to post a standup today
@@ -316,7 +331,7 @@ const cleanUpExcuses = robot => {
 const setupCronJob = robot => {
   const job = new CronJob({
     // Every weekday 23:45h
-    cronTime: '00 45 23 * * 1-5',
+    cronTime: '00 45 23 * * *',
     onTick: () => {
       checkStandupsDone(robot)
       cleanUpExcuses(robot)
@@ -343,7 +358,7 @@ module.exports = robot => {
   //   done = true
   // })
 
-  robot.hear(/standup add ([1-5])-([1-5])/, async res => {
+  robot.hear(/standup add ([0-6])-([0-6])/, async res => {
     const { message, match } = res
     if (!isPrivateSlackMessage(res)) return
     if (message.user.slack.tz_offset == null) {
@@ -500,7 +515,7 @@ module.exports = robot => {
   // robot.hear('blame', res => {
   //   if (!isPrivateSlackMessage(res)) return
   //   checkStandupsDone(robot)
-  //   cleanUpExcuses(robot.brain)
+  //   cleanUpExcuses(robot)
   // })
 
   robot.hear('standup leaderboard', res => {
