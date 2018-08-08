@@ -412,8 +412,8 @@ module.exports = robot => {
     const { user } = res.message
     if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
     const userId = res.match[1]
-    removeFromMap('standuppers', userId)
-    removeMap(`excuses-${userId}`)
+    removeFromMap('standuppers', userId, brain)
+    removeMap(`excuses-${userId}`, brain)
     res.send(`User with id ${userId} removed`)
   })
 
