@@ -247,30 +247,30 @@ const checkStandupsDone = robot => {
   const randomIdx = Math.floor(Math.random() * phrases.length)
   const randomPhrase = phrases[randomIdx]
   if (!usersToShame.length) {
-    return robot.messageRoom(
+    robot.messageRoom(
       HUBOT_STANDUP_CHANNEL,
       'Everyone did their standups yesterday! That makes me a very happy Wookiee!'
     )
-  }
-  if (usersToShame.length === 1) {
-    return robot.messageRoom(
+  } else if (usersToShame.length === 1) {
+    robot.messageRoom(
       HUBOT_STANDUP_CHANNEL,
       `Only @${getUserName(
         usersToShame[0],
         brain
       )} forgot to do their standup yesterday. ${randomPhrase}`
     )
+  } else {
+    const displayUsers = usersToShame.slice()
+    const lastUser = displayUsers.pop()
+    robot.messageRoom(
+      HUBOT_STANDUP_CHANNEL,
+      displayUsers.map(user => `@${getUserName(user, brain)}`).join(', ') +
+        ` and @${getUserName(
+          lastUser,
+          brain
+        )} did not do their standups yesterday. ${randomPhrase}`
+    )
   }
-  const displayUsers = usersToShame.slice()
-  const lastUser = displayUsers.pop()
-  robot.messageRoom(
-    HUBOT_STANDUP_CHANNEL,
-    displayUsers.map(user => `@${getUserName(user, brain)}`).join(', ') +
-      ` and @${getUserName(
-        lastUser,
-        brain
-      )} did not do their standups yesterday. ${randomPhrase}`
-  )
 
   // Zero users that deserve it on the leaderboard.
   usersToShame.forEach(user => {
