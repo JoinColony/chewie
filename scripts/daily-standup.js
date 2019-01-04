@@ -321,7 +321,7 @@ const checkStandupsDone = robot => {
 
 const cleanUpExcuses = robot => {
   const { brain } = robot
-  const today = getOffsetDate(0)
+  const today = getOffsetDate(-11)
   const standuppers = Object.keys(getMap('standuppers', brain))
   standuppers.forEach(userId => {
     const excuses = Object.keys(getMap(`excuses-${userId}`, brain))
