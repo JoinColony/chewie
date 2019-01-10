@@ -529,4 +529,17 @@ module.exports = robot => {
     const output = getLeaderboard(false, brain)
     res.send(output)
   })
+
+  robot.hear(/standup admin leaderboard reset (.+)/, res => {
+    const { user } = res.message
+    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    const standuppers = Object.values(getMap('standuppers', brain));
+    standuppers
+      .filter(user => getUserName(user, brain) == res.match[1])
+      .forEach(user => {
+        user.currentCount = 0;
+        updateMap('standuppers', user.id, user, brain)
+      });
+  })
+
 }
