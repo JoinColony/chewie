@@ -201,9 +201,11 @@ const getLeaderboard = (rerank, brain) => {
   let rank = 1
   let output = '*Number of standups since each person last missed one*\n'
   let rankScore = standuppers[0].currentCount
+  let nProcessed = 0;
   standuppers.forEach(user => {
+    nProcessed += 1
     if (rankScore != user.currentCount) {
-      rank += 1
+      rank = nProcessed
       rankScore = user.currentCount
       output += "=============================\n"
     }
