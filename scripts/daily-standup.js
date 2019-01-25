@@ -250,33 +250,39 @@ const checkStandupsDone = robot => {
     .filter(user => !isUserExcusedToday(user, date, brain))
     // Users who have not posted a standup
     .filter(user => !hasUserDoneAStandupToday(user, date, brain))
-  const phrases = Object.values(getMap('phrases', brain))
-  const randomIdx = Math.floor(Math.random() * phrases.length)
-  const randomPhrase = phrases[randomIdx]
+
   if (!usersToShame.length) {
+    const praises = Object.values(getMap('praises', brain))
+    const randomIdx = Math.floor(Math.random() * praises.length)
+    const randomPraise = praises[randomIdx]
     robot.messageRoom(
       HUBOT_STANDUP_CHANNEL,
-      'Everyone did their standups yesterday! That makes me a very happy Wookiee!'
-    )
-  } else if (usersToShame.length === 1) {
-    robot.messageRoom(
-      HUBOT_STANDUP_CHANNEL,
-      `Only @${getUserName(
-        usersToShame[0],
-        brain
-      )} forgot to do their standup yesterday. ${randomPhrase}`
+      randomPraise || 'Everyone did their standups yesterday! That makes me a very happy Wookiee!'
     )
   } else {
-    const displayUsers = usersToShame.slice()
-    const lastUser = displayUsers.pop()
-    robot.messageRoom(
-      HUBOT_STANDUP_CHANNEL,
-      displayUsers.map(user => `@${getUserName(user, brain)}`).join(', ') +
-        ` and @${getUserName(
-          lastUser,
+    const phrases = Object.values(getMap('phrases', brain))
+    const randomIdx = Math.floor(Math.random() * phrases.length)
+    const randomPhrase = phrases[randomIdx]
+    if (usersToShame.length === 1) {
+      robot.messageRoom(
+        HUBOT_STANDUP_CHANNEL,
+        `Only @${getUserName(
+          usersToShame[0],
           brain
-        )} did not do their standups yesterday. ${randomPhrase}`
-    )
+        )} forgot to do their standup yesterday. ${randomPhrase}`
+      )
+    } else {
+      const displayUsers = usersToShame.slice()
+      const lastUser = displayUsers.pop()
+      robot.messageRoom(
+        HUBOT_STANDUP_CHANNEL,
+        displayUsers.map(user => `@${getUserName(user, brain)}`).join(', ') +
+          ` and @${getUserName(
+            lastUser,
+            brain
+          )} did not do their standups yesterday. ${randomPhrase}`
+      )
+    }
   }
 
   // Zero users that deserve it on the leaderboard.
@@ -365,6 +371,37 @@ module.exports = robot => {
   //   done = true
   // })
 
+  const listenAddPhrase = (kind, res) => {
+    const { user } = res.message
+    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    addToMap(`${kind}s`, null, res.match[1], brain)
+    res.send(`OK, I've added this ${kind}`)
+  }
+
+  const listenListPhrases = (kind, res) => {
+    const { user } = res.message
+    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    const map = getMap(`${kind}s`, brain)
+    const phrases = Object.entries(map).map(
+      ([key, phrase]) => `${key} - "${phrase}"`
+    )
+    if (!phrases.length) {
+      return res.send(`No amusing ${kind}s found`)
+    }
+    res.send(
+      `I will pick one of the following amusing ${kind}s randomly:\n${phrases.join(
+        '\n'
+      )}`
+    )
+  }
+
+  const listenRemovePhrase = (kind, res) => {
+    const { user } = res.message
+    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    removeFromMap(`${kind}s`, res.match[1], brain)
+    res.send(`OK, I removed the ${kind} with id ${res.match[1]}`)
+  }
+
   robot.hear(/standup add ([0-6])-([0-6])/, async res => {
     const { message, match } = res
     if (!isPrivateSlackMessage(res)) return
@@ -439,36 +476,14 @@ module.exports = robot => {
     res.send(`User with id ${userId} removed`)
   })
 
-  robot.hear(/standup admin phrase add (.+)/, res => {
-    const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
-    addToMap('phrases', null, res.match[1], brain)
-    res.send('OK, I added this phrase')
-  })
+  robot.hear(/standup admin phrase add (.+)/, listenAddPhrase.bind(this, 'phrase'))
+  robot.hear(/standup admin praise add (.+)/, listenAddPhrase.bind(this, 'praise'))
 
-  robot.hear('standup admin phrase list', res => {
-    const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
-    const map = getMap('phrases', brain)
-    const phrases = Object.entries(map).map(
-      ([key, phrase]) => `${key} - "${phrase}"`
-    )
-    if (!phrases.length) {
-      return res.send('No amusing scornful remarks found')
-    }
-    res.send(
-      `I will pick one of the following amusing scornful remarks randomly:\n${phrases.join(
-        '\n'
-      )}`
-    )
-  })
+  robot.hear('standup admin phrase list', listenListPhrases.bind(this, 'phrase'))
+  robot.hear('standup admin praise list', listenListPhrases.bind(this, 'praise'))
 
-  robot.hear(/standup admin phrase remove (\d+)/, res => {
-    const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
-    removeFromMap('phrases', res.match[1], brain)
-    res.send(`OK, I removed the phrase with id ${res.match[1]}`)
-  })
+  robot.hear(/standup admin phrase remove (\d+)/, listenRemovePhrase.bind(this, 'phrase'))
+  robot.hear(/standup admin praise remove (\d+)/, listenRemovePhrase.bind(this, 'praise'))
 
   // At least 3 bold lines with another line following that
   robot.hear(/(\*.+?\*.*(\r\n|\r|\n)(.*(\r\n|\r|\n))*?){3,}/, res => {
