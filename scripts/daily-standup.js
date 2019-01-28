@@ -257,7 +257,7 @@ const checkStandupsDone = robot => {
     const randomPraise = praises[randomIdx]
     robot.messageRoom(
       HUBOT_STANDUP_CHANNEL,
-      randomPraise || 'Everyone did their standups yesterday! That makes me a very happy Wookiee!'
+      `Everyone did their standups yesterday! ${randomPraise || 'That makes me a very happy Wookiee!'}`
     )
   } else {
     const phrases = Object.values(getMap('phrases', brain))
@@ -496,7 +496,7 @@ module.exports = robot => {
     robot.emit('slack.reaction', { message: res.message, name: 'chewie' })
   })
 
-  robot.hear(/standup excuse add (.+)/, res => {
+  robot.hear(/[sS]tandup excuse add (.+)/, res => {
     const { user } = res.message
     if (isPrivateSlackMessage(res)) {
       return res.send(
