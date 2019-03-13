@@ -17,8 +17,10 @@ const CronJob = require('cron').CronJob
 const chrono = require('chrono-node')
 
 const BRAIN_PREFIX = 'standup'
-// This is the standup-testing channel. This should be an env variable at some point
+// This is the daily-standup channel. This should be an env variable at some point
 const HUBOT_STANDUP_CHANNEL = 'C0NFZA7T5'
+// #standup-testing channel
+// const HUBOT_STANDUP_CHANNEL = 'CBX6J6MAA'
 
 /* A few redis helpers */
 const getMap = (key, brain) => {
@@ -81,10 +83,20 @@ const getOffsetDay = offset => {
   return d.getUTCDay()
 }
 
+const getOffsetHour = offset => {
+  const d = new Date(Date.now() + offset * 60 * 60 * 1000)
+   return d.getUTCHours()
+}
+
 // Returns the current date for a specific user
 const getCurrentDateForUser = user => {
   const offset = user.slack.tz_offset / (60 * 60)
   return getOffsetDate(offset)
+}
+
+const getCurrentTimeForUser = user => {
+  const offset = user.slack.tz_offset / (60 * 60)
+  return getOffsetHour(offset)
 }
 
 const dateIsInRange = (dateStr, rangeStr) => {
@@ -163,10 +175,8 @@ const getUserName = (userToFind, brain) => {
 }
 
 const nobodyHadToWorkToday = (users, day) => {
-  console.log('nobodayHadToWorkToday day: ', day);
   for (let i = 0; i < users.length; i++) {
     const user = users[i];
-    console.log(user.workDays);
     if (user && user.workDays[0] <= day && user.workDays[1] >= day) {
       return false;
     }
@@ -175,12 +185,9 @@ const nobodyHadToWorkToday = (users, day) => {
 }
 
 const isUserExcusedToday = (user, date, brain) => {
-  console.log('isUserExcusedToday user: ', user.name);
-  console.log('isUserExcusedToday date: ', date);
   const map = getMap(`excuses-${user.id}`, brain)
   const excuses = Object.keys(map)
   for (let i = 0; i < excuses.length; i++) {
-    console.log(excuses[i]);
     if (excuses[i] === date) return true
     if (excuses[i].includes('>') && dateIsInRange(date, excuses[i])) return true
   }
@@ -190,6 +197,11 @@ const isUserExcusedToday = (user, date, brain) => {
 const hasUserDoneAStandupToday = (user, date, brain) => {
   const standups = getMap(date, brain)
   return Object.keys(standups).indexOf(user.id) > -1
+}
+
+const hasUserDoneAStandupInTimeToday = (user, date, brain) => {
+  const standups = getMap(date, brain)
+  return !!(standups[user.id] && standups[user.id] < 12)
 }
 
 // Generates and returns the leaderboard. If rerank is passed as true, the users'q most-recent-official-rankings
@@ -299,10 +311,8 @@ const checkStandupsDone = robot => {
   const usersToIncrementOnLeaderboard = standuppers
     // Users who had to post a standup today
     .filter(user => user.workDays[0] <= day && user.workDays[1] >= day)
-    // Users who are not excused for today
-    .filter(user => !isUserExcusedToday(user, date, brain))
-    // Users who have posted a standup
-    .filter(user => hasUserDoneAStandupToday(user, date, brain))
+    // Users who have posted a standup or are excused are incremented
+    .filter(user => hasUserDoneAStandupInTimeToday(user, date, brain) || isUserExcusedToday(user, date, brain))
     .forEach(user => {
       if (!user.currentCount) {
         user.currentCount = 1
@@ -492,7 +502,14 @@ module.exports = robot => {
       return
     }
     const date = getCurrentDateForUser(user)
-    addToMap(date, res.message.user.id, true, brain)
+    const hour = getCurrentTimeForUser(user)
+
+    if (hour >= 12) {
+      const username = getUserName(user, brain)
+      res.send(`It is a bit late to post your standup, @${username}, please try to do it before noon your time.`)
+    }
+
+    addToMap(date, res.message.user.id, hour, brain)
     robot.emit('slack.reaction', { message: res.message, name: 'chewie' })
   })
 
