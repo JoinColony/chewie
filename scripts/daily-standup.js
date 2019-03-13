@@ -17,8 +17,10 @@ const CronJob = require('cron').CronJob
 const chrono = require('chrono-node')
 
 const BRAIN_PREFIX = 'standup'
-// This is the standup-testing channel. This should be an env variable at some point
+// This is the daily-standup channel. This should be an env variable at some point
 const HUBOT_STANDUP_CHANNEL = 'C0NFZA7T5'
+// #standup-testing channel
+// const HUBOT_STANDUP_CHANNEL = 'CBX6J6MAA'
 
 /* A few redis helpers */
 const getMap = (key, brain) => {
