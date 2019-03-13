@@ -83,10 +83,20 @@ const getOffsetDay = offset => {
   return d.getUTCDay()
 }
 
+const getOffsetHour = offset => {
+  const d = new Date(Date.now() + offset * 60 * 60 * 1000)
+   return d.getUTCHours()
+}
+
 // Returns the current date for a specific user
 const getCurrentDateForUser = user => {
   const offset = user.slack.tz_offset / (60 * 60)
   return getOffsetDate(offset)
+}
+
+const getCurrentTimeForUser = user => {
+  const offset = user.slack.tz_offset / (60 * 60)
+  return getOffsetHour(offset)
 }
 
 const dateIsInRange = (dateStr, rangeStr) => {
@@ -187,6 +197,11 @@ const isUserExcusedToday = (user, date, brain) => {
 const hasUserDoneAStandupToday = (user, date, brain) => {
   const standups = getMap(date, brain)
   return Object.keys(standups).indexOf(user.id) > -1
+}
+
+const hasUserDoneAStandupInTimeToday = (user, date, brain) => {
+  const standups = getMap(date, brain)
+  return !!(standups[user.id] && standups[user.id] < 12)
 }
 
 // Generates and returns the leaderboard. If rerank is passed as true, the users'q most-recent-official-rankings
@@ -296,10 +311,8 @@ const checkStandupsDone = robot => {
   const usersToIncrementOnLeaderboard = standuppers
     // Users who had to post a standup today
     .filter(user => user.workDays[0] <= day && user.workDays[1] >= day)
-    // Users who are not excused for today
-    .filter(user => !isUserExcusedToday(user, date, brain))
-    // Users who have posted a standup
-    .filter(user => hasUserDoneAStandupToday(user, date, brain))
+    // Users who have posted a standup or are excused are incremented
+    .filter(user => hasUserDoneAStandupInTimeToday(user, date, brain) || isUserExcusedToday(user, date, brain))
     .forEach(user => {
       if (!user.currentCount) {
         user.currentCount = 1
@@ -489,7 +502,14 @@ module.exports = robot => {
       return
     }
     const date = getCurrentDateForUser(user)
-    addToMap(date, res.message.user.id, true, brain)
+    const hour = getCurrentTimeForUser(user)
+
+    if (hour >= 12) {
+      const username = getUserName(user, brain)
+      res.send(`It is a bit late to post your standup, @${username}, please try to do it before noon your time.`)
+    }
+
+    addToMap(date, res.message.user.id, hour, brain)
     robot.emit('slack.reaction', { message: res.message, name: 'chewie' })
   })
 
