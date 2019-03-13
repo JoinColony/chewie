@@ -165,10 +165,8 @@ const getUserName = (userToFind, brain) => {
 }
 
 const nobodyHadToWorkToday = (users, day) => {
-  console.log('nobodayHadToWorkToday day: ', day);
   for (let i = 0; i < users.length; i++) {
     const user = users[i];
-    console.log(user.workDays);
     if (user && user.workDays[0] <= day && user.workDays[1] >= day) {
       return false;
     }
@@ -177,12 +175,9 @@ const nobodyHadToWorkToday = (users, day) => {
 }
 
 const isUserExcusedToday = (user, date, brain) => {
-  console.log('isUserExcusedToday user: ', user.name);
-  console.log('isUserExcusedToday date: ', date);
   const map = getMap(`excuses-${user.id}`, brain)
   const excuses = Object.keys(map)
   for (let i = 0; i < excuses.length; i++) {
-    console.log(excuses[i]);
     if (excuses[i] === date) return true
     if (excuses[i].includes('>') && dateIsInRange(date, excuses[i])) return true
   }
