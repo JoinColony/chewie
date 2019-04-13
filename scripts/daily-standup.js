@@ -174,10 +174,13 @@ const getUserName = (userToFind, brain) => {
   return user ? user.name : userToFind.id
 }
 
+const userHasToWorkToday = (user, day) =>
+  user.workDays[0] <= day && user.workDays[1] >= day;
+
 const nobodyHadToWorkToday = (users, day) => {
   for (let i = 0; i < users.length; i++) {
     const user = users[i];
-    if (user && user.workDays[0] <= day && user.workDays[1] >= day) {
+    if (user && userHasToWorkToday(user, day)) {
       return false;
     }
   }
@@ -257,7 +260,7 @@ const checkStandupsDone = robot => {
   const usersToShame = standuppers
     // The workdays have to be connected (i.e. not separated by a weekend), for now
     // Users who had to post a standup today
-    .filter(user => user.workDays[0] <= day && user.workDays[1] >= day)
+    .filter(user => userHasToWorkToday(user, day))
     // Users who are not excused for today
     .filter(user => !isUserExcusedToday(user, date, brain))
     // Users who have not posted a standup
@@ -310,7 +313,7 @@ const checkStandupsDone = robot => {
 
   const usersToIncrementOnLeaderboard = standuppers
     // Users who had to post a standup today
-    .filter(user => user.workDays[0] <= day && user.workDays[1] >= day)
+    .filter(user => userHasToWorkToday(user, day))
     // Users who have posted a standup or are excused are incremented
     .filter(user => hasUserDoneAStandupInTimeToday(user, date, brain) || isUserExcusedToday(user, date, brain))
     .forEach(user => {
@@ -504,7 +507,7 @@ module.exports = robot => {
     const date = getCurrentDateForUser(user)
     const hour = getCurrentTimeForUser(user)
 
-    if (hour >= 12) {
+    if (hour >= 12 && userHasToWorkToday(user, day)) {
       const username = getUserName(user, brain)
       res.send(`It is a bit late to post your standup, @${username}, please try to do it before noon your time.`)
     }
