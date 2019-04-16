@@ -85,13 +85,18 @@ const getOffsetDay = offset => {
 
 const getOffsetHour = offset => {
   const d = new Date(Date.now() + offset * 60 * 60 * 1000)
-   return d.getUTCHours()
+  return d.getUTCHours()
 }
 
 // Returns the current date for a specific user
 const getCurrentDateForUser = user => {
   const offset = user.slack.tz_offset / (60 * 60)
   return getOffsetDate(offset)
+}
+
+const getCurrentDayForUser = user => {
+  const offset = user.slack.tz_offset / (60 * 60)
+  return getOffsetDay(offset)
 }
 
 const getCurrentTimeForUser = user => {
@@ -175,16 +180,16 @@ const getUserName = (userToFind, brain) => {
 }
 
 const userHasToWorkToday = (user, day) =>
-  user.workDays[0] <= day && user.workDays[1] >= day;
+  user.workDays[0] <= day && user.workDays[1] >= day
 
 const nobodyHadToWorkToday = (users, day) => {
   for (let i = 0; i < users.length; i++) {
-    const user = users[i];
+    const user = users[i]
     if (user && userHasToWorkToday(user, day)) {
-      return false;
+      return false
     }
   }
-  return true;
+  return true
 }
 
 const isUserExcusedToday = (user, date, brain) => {
@@ -216,13 +221,13 @@ const getLeaderboard = (rerank, brain) => {
   let rank = 1
   let output = '*Number of standups since each person last missed one*\n'
   let rankScore = standuppers[0].currentCount
-  let nProcessed = 0;
+  let nProcessed = 0
   standuppers.forEach(user => {
     nProcessed += 1
     if (rankScore != user.currentCount) {
       rank = nProcessed
       rankScore = user.currentCount
-      output += "=============================\n"
+      output += '=============================\n'
     }
     lastOfficialRank = user.lastOfficialRank
     let movement
@@ -254,7 +259,10 @@ const checkStandupsDone = robot => {
   const standuppers = Object.values(getMap('standuppers', brain))
 
   if (nobodyHadToWorkToday(standuppers, day)) {
-    return robot.messageRoom(HUBOT_STANDUP_CHANNEL, 'Yesterday was a free day for everyone! Hope you enjoyed it 🏝')
+    return robot.messageRoom(
+      HUBOT_STANDUP_CHANNEL,
+      'Yesterday was a free day for everyone! Hope you enjoyed it 🏝'
+    )
   }
 
   const usersToShame = standuppers
@@ -272,7 +280,8 @@ const checkStandupsDone = robot => {
     const randomPraise = praises[randomIdx]
     robot.messageRoom(
       HUBOT_STANDUP_CHANNEL,
-      `Everyone did their standups yesterday! ${randomPraise || 'That makes me a very happy Wookiee!'}`
+      `Everyone did their standups yesterday! ${randomPraise ||
+        'That makes me a very happy Wookiee!'}`
     )
   } else {
     const phrases = Object.values(getMap('phrases', brain))
@@ -315,7 +324,11 @@ const checkStandupsDone = robot => {
     // Users who had to post a standup today
     .filter(user => userHasToWorkToday(user, day))
     // Users who have posted a standup or are excused are incremented
-    .filter(user => hasUserDoneAStandupInTimeToday(user, date, brain) || isUserExcusedToday(user, date, brain))
+    .filter(
+      user =>
+        hasUserDoneAStandupInTimeToday(user, date, brain) ||
+        isUserExcusedToday(user, date, brain)
+    )
     .forEach(user => {
       if (!user.currentCount) {
         user.currentCount = 1
@@ -489,14 +502,32 @@ module.exports = robot => {
     res.send(`User with id ${userId} removed`)
   })
 
-  robot.hear(/standup admin phrase add (.+)/, listenAddPhrase.bind(this, 'phrase'))
-  robot.hear(/standup admin praise add (.+)/, listenAddPhrase.bind(this, 'praise'))
+  robot.hear(
+    /standup admin phrase add (.+)/,
+    listenAddPhrase.bind(this, 'phrase')
+  )
+  robot.hear(
+    /standup admin praise add (.+)/,
+    listenAddPhrase.bind(this, 'praise')
+  )
 
-  robot.hear('standup admin phrase list', listenListPhrases.bind(this, 'phrase'))
-  robot.hear('standup admin praise list', listenListPhrases.bind(this, 'praise'))
+  robot.hear(
+    'standup admin phrase list',
+    listenListPhrases.bind(this, 'phrase')
+  )
+  robot.hear(
+    'standup admin praise list',
+    listenListPhrases.bind(this, 'praise')
+  )
 
-  robot.hear(/standup admin phrase remove (\d+)/, listenRemovePhrase.bind(this, 'phrase'))
-  robot.hear(/standup admin praise remove (\d+)/, listenRemovePhrase.bind(this, 'praise'))
+  robot.hear(
+    /standup admin phrase remove (\d+)/,
+    listenRemovePhrase.bind(this, 'phrase')
+  )
+  robot.hear(
+    /standup admin praise remove (\d+)/,
+    listenRemovePhrase.bind(this, 'praise')
+  )
 
   // At least 3 bold lines with another line following that
   robot.hear(/(\*.+?\*.*(\r\n|\r|\n)(.*(\r\n|\r|\n))*?){3,}/, res => {
@@ -506,10 +537,13 @@ module.exports = robot => {
     }
     const date = getCurrentDateForUser(user)
     const hour = getCurrentTimeForUser(user)
+    const day = getCurrentDayForUser(user)
 
     if (hour >= 12 && userHasToWorkToday(user, day)) {
       const username = getUserName(user, brain)
-      res.send(`It is a bit late to post your standup, @${username}, please try to do it before noon your time.`)
+      res.send(
+        `It is a bit late to post your standup, @${username}, please try to do it before noon your time.`
+      )
     }
 
     addToMap(date, res.message.user.id, hour, brain)
@@ -570,13 +604,12 @@ module.exports = robot => {
   robot.hear(/standup admin leaderboard reset (.+)/, res => {
     const { user } = res.message
     if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
-    const standuppers = Object.values(getMap('standuppers', brain));
+    const standuppers = Object.values(getMap('standuppers', brain))
     standuppers
       .filter(user => getUserName(user, brain) == res.match[1])
       .forEach(user => {
-        user.currentCount = 0;
+        user.currentCount = 0
         updateMap('standuppers', user.id, user, brain)
-      });
+      })
   })
-
 }
