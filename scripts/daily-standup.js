@@ -538,8 +538,9 @@ module.exports = robot => {
     const date = getCurrentDateForUser(user)
     const hour = getCurrentTimeForUser(user)
     const day = getCurrentDayForUser(user)
+    const standupper = getFromMap('standuppers', user.id, brain)
 
-    if (hour >= 12 && userHasToWorkToday(user, day)) {
+    if (hour >= 12 && userHasToWorkToday(standupper, day)) {
       const username = getUserName(user, brain)
       res.send(
         `It is a bit late to post your standup, @${username}, please try to do it before noon your time.`
