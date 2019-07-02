@@ -14,130 +14,38 @@
 //   chmanie
 
 const CronJob = require('cron').CronJob
-const chrono = require('chrono-node')
 
-const BRAIN_PREFIX = 'standup'
+const {
+  getOffsetDate,
+  getOffsetDay,
+  getOffsetHour,
+  getCurrentDateForUser,
+  getCurrentDayForUser,
+  getCurrentTimeForUser,
+  dateIsInRange,
+  dateIsOlderThan,
+  parseNaturalDate,
+} = require('./dates');
+
+const { isChannel, isPrivateSlackMessage } = require('./utils/channels');
+
+const getBrain = require('./brain');
+
+const BRAIN_PREFIX = 'standup';
 // This is the daily-standup channel. This should be an env variable at some point
-const HUBOT_STANDUP_CHANNEL = 'C0NFZA7T5'
+const HUBOT_STANDUP_CHANNEL = 'C0NFZA7T5';
 // #standup-testing channel
 // const HUBOT_STANDUP_CHANNEL = 'CBX6J6MAA'
 
-/* A few redis helpers */
-const getMap = (key, brain) => {
-  return JSON.parse(brain.get(`${BRAIN_PREFIX}-${key}`)) || {}
-}
-
-const setMap = (key, value, brain) => {
-  return brain.set(`${BRAIN_PREFIX}-${key}`, JSON.stringify(value))
-}
-
-const removeMap = (key, brain) => {
-  return brain.remove(`${BRAIN_PREFIX}-${key}`)
-}
-
-const addToMap = (mapKey, key, value, brain) => {
-  const map = getMap(mapKey, brain)
-  // Use incremental number if no key is given
-  key = key || Object.keys(map).length + 1
-  if (map[key]) {
-    return false
-  }
-  map[key] = value
-  setMap(mapKey, map, brain)
-  return true
-}
-
-const updateMap = (mapKey, key, value, brain) => {
-  const map = getMap(mapKey, brain)
-  if (!key || !map[key]) {
-    return false
-  }
-  map[key] = value
-  setMap(mapKey, map, brain)
-  return true
-}
-
-const getFromMap = (mapKey, key, brain) => {
-  const map = getMap(mapKey, brain)
-  return map[key]
-}
-
-const removeFromMap = (mapKey, key, brain) => {
-  const map = getMap(mapKey, brain)
-  delete map[key]
-  setMap(mapKey, map, brain)
-}
-
-/* Chat message helpers */
-const isPrivateSlackMessage = res => res.message.room.startsWith('D')
-const isChannel = (res, channelId) => res.message.room === channelId
-
-/* Date helpers */
-const getOffsetDate = (offset, timestamp = Date.now()) => {
-  const d = new Date(timestamp + offset * 60 * 60 * 1000)
-  return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`
-}
-
-const getOffsetDay = offset => {
-  const d = new Date(Date.now() + offset * 60 * 60 * 1000)
-  return d.getUTCDay()
-}
-
-const getOffsetHour = offset => {
-  const d = new Date(Date.now() + offset * 60 * 60 * 1000)
-  return d.getUTCHours()
-}
-
-// Returns the current date for a specific user
-const getCurrentDateForUser = user => {
-  const offset = user.slack.tz_offset / (60 * 60)
-  return getOffsetDate(offset)
-}
-
-const getCurrentDayForUser = user => {
-  const offset = user.slack.tz_offset / (60 * 60)
-  return getOffsetDay(offset)
-}
-
-const getCurrentTimeForUser = user => {
-  const offset = user.slack.tz_offset / (60 * 60)
-  return getOffsetHour(offset)
-}
-
-const dateIsInRange = (dateStr, rangeStr) => {
-  const range = rangeStr.split('>')
-  const date = new Date(dateStr)
-  const start = new Date(range[0])
-  const end = new Date(range[1])
-  return start <= date && date <= end
-}
-
-const dateIsOlderThan = (dateOrRangeStr, refDate) => {
-  const date = dateOrRangeStr.includes('>')
-    ? dateOrRangeStr.split('>')[1]
-    : dateOrRangeStr
-  return new Date(date) <= new Date(refDate)
-}
-
-const parseNaturalDate = (expr, user) => {
-  const referenceDate = new Date(`${getCurrentDateForUser(user)} 11:00Z`)
-  const parsed = chrono.parse(expr, referenceDate, { forwardDate: true })
-  const { start } = parsed[0]
-  let end
-  if (parsed.length == 2) {
-    end = parsed[1].start
-  } else {
-    end = parsed[0].end
-  }
-  const dateStart = `${start.get('year')}-${start.get('month')}-${start.get(
-    'day'
-  )}`
-  if (end) {
-    const dateEnd = `${end.get('year')}-${end.get('month')}-${end.get('day')}`
-    return `${dateStart}>${dateEnd}`
-  }
-  return dateStart
-}
+const {
+  addToMap,
+  getFromMap,
+  getMap,
+  removeFromMap,
+  removeMap,
+  setMap,
+  updateMap,
+} = getBrain(BRAIN_PREFIX);
 
 /* User permission helpers */
 const getUser = (userId, brain) => {
