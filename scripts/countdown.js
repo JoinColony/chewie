@@ -9,6 +9,10 @@
 // Commands:
 //   countdown add 'My title' 2019-04-07
 //     Add an event with a title and a due date
+//   countdown status
+//     Send messages for all current countdowns
+//   countdown remove 'My title'
+//     Remove the given countdown (only the creator can run this)
 //
 // Author:
 //   JamesLefrere
@@ -51,6 +55,8 @@ const getSass = hours => {
   return '*PANIC MODE ENGAGE!!!* gogogogogogogogogogogogogo54321111111glhf';
 };
 
+const getKey = title => title.replace(/\s/g, '');
+
 const processCountdowns = robot => {
   const { brain } = robot;
   const currentDate = getOffsetDate(-11);
@@ -92,7 +98,7 @@ module.exports = robot => {
   setupCronJob(robot);
 
   robot.hear(/^countdown add '(.+)' (.+)$/, res => {
-    ({ user, room } = res.message);
+    const { message: { user, room }, match } = res;
 
     if (isPrivateSlackMessage(res)) {
       return res.send('Countdowns can only be added in a channel.');
@@ -102,18 +108,46 @@ module.exports = robot => {
       return res.send('Please set your time zone in slack first')
     }
 
-    const title = res.match[1];
-    const dueDate = parseNaturalDate(res.match[2], user);
+    const title = match[1];
+    const dueDate = parseNaturalDate(match[2], user);
 
-    const key = title.replace(/\s/g, '');
+    const key = getKey(title);
     const existing = getFromMap(COUNTDOWNS, key, brain);
 
     if (existing) {
       return res.send('Oops, a countdown with that title already exists');
     }
 
-    addToMap(COUNTDOWNS, key, { title, dueDate, room }, brain);
+    addToMap(
+      COUNTDOWNS,
+      key,
+      { title, dueDate, room, userId: user.id },
+      brain
+    );
 
     return res.send('The countdown begins!');
+  });
+
+  robot.hear(/^countdown status$/, () => {
+    processCountdowns(robot);
+  });
+
+  robot.hear(/^countdown remove '(.*)'$/, res => {
+    const { message: { user }, match } = res;
+
+    const key = getKey(match[1]);
+    const existing = getFromMap(COUNTDOWNS, key, brain);
+
+    if (!existing) {
+      return res.send(`That countdown doesn't exist`);
+    }
+
+    if (user.id !== existing.userId) {
+      return res.send(`Only user ID ${userId} can remove that countdown`);
+    }
+
+    removeFromMap(COUNTDOWNS, key, brain);
+
+    return res.send('Countdown removed');
   });
 };
