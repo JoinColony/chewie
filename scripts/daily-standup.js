@@ -25,11 +25,11 @@ const {
   dateIsInRange,
   dateIsOlderThan,
   parseNaturalDate,
-} = require('./dates');
+} = require('./utils/dates');
 
 const { isChannel, isPrivateSlackMessage } = require('./utils/channels');
 
-const getBrain = require('./brain');
+const getBrain = require('./utils/brain');
 
 const BRAIN_PREFIX = 'standup';
 // This is the daily-standup channel. This should be an env variable at some point

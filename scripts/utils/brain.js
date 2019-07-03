@@ -1,4 +1,4 @@
-export default brainPrefix => {
+module.exports = brainPrefix => {
   const getMap = (key, brain) =>
     JSON.parse(brain.get(`${brainPrefix}-${key}`)) || {};
 
