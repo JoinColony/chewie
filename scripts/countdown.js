@@ -7,7 +7,7 @@
 // Configuration:
 //
 // Commands:
-//   add 'My title' 2019-04-07
+//   countdown add 'My title' 2019-04-07
 //     Add an event with a title and a due date
 //
 // Author:
@@ -15,24 +15,16 @@
 
 const CronJob = require('cron').CronJob;
 
-const getBrain = require('./brain');
+const getBrain = require('./utils/brain');
 
 const {
   getOffsetDate,
-  getOffsetDay,
-  getOffsetHour,
-  getCurrentDateForUser,
-  getCurrentDayForUser,
-  getCurrentTimeForUser,
-  dateIsInRange,
-  dateIsOlderThan,
   parseNaturalDate,
-} = require('./dates');
+} = require('./utils/dates');
 
 const { isPrivateSlackMessage } = require('./utils/channels');
 
 const BRAIN_PREFIX = 'countdown';
-
 const COUNTDOWNS = 'countdowns';
 
 const {
@@ -40,45 +32,45 @@ const {
   getFromMap,
   getMap,
   removeFromMap,
-  removeMap,
-  setMap,
-  updateMap,
 } = getBrain(BRAIN_PREFIX);
+
+const getSass = hours => {
+  if (hours > 24 * 7 * 4) return 'An ocean of time.';
+  if (hours > 24 * 7 * 3.5) return 'Ages, mate.';
+  if (hours > 24 * 7 * 3) return `It's getting closer, but it'll be fine.`;
+  if (hours > 24 * 7 * 2.5) return 'Watch out for this one.';
+  if (hours > 24 * 7 * 2) return 'Did you try working faster?';
+  if (hours > 24 * 7 * 1.5) return `That's concerning.`;
+  if (hours > 24 * 7) return `That's quite soon if you think about it.`;
+  if (hours > 24 * 6) return `Well that doesn't sound right...`;
+  if (hours > 24 * 5) return 'A week?! A mere working week?!';
+  if (hours > 24 * 4) return 'Shit, we can do it!';
+  if (hours > 24 * 3) return 'A'.repeat(20);
+  if (hours > 24 * 2) return `I'll give you 1 ETH if you finish it today.`;
+  if (hours > 24) return `*${'A'.repeat(200)}*`;
+  return '*PANIC MODE ENGAGE!!!* gogogogogogogogogogogogogo54321111111glhf';
+};
 
 const processCountdowns = robot => {
   const { brain } = robot;
   const currentDate = getOffsetDate(-11);
 
-  Object
-    .entries(getMap('countdowns', brain))
-    .forEach(([key, { title, dueDate, room }]) => {
-    const diff = Math.abs(dueDate.getTime() - currentDate.getTime());
+  Object.entries(getMap(COUNTDOWNS, brain)).forEach(
+    ([key, { title, dueDate, room }]) => {
+      const diff = new Date(dueDate).getTime() - new Date(currentDate).getTime();
 
-    if (diff < 0) {
-      return removeFromMap(key);
-    }
+      if (diff < 0) {
+        robot.messageRoom(room, `${title}: due date elapsed!`);
+        return removeFromMap(COUNTDOWNS, key, brain);
+      }
 
-    const hours = (diff / (1000 * 60 * 60)).toFixed(2);
+      const hours = (diff / (1000 * 60 * 60)).toFixed(2);
 
-    const sass = (() => {
-      if (hours > 24 * 7 * 4) return 'An ocean of time.';
-      if (hours > 24 * 7 * 3) return `It's getting closer, but it'll be fine.`;
-      if (hours > 24 * 7 * 2) return 'Did you try working faster?';
-      if (hours > 24 * 7) return `That's quite soon if you think about it.`;
-      if (hours > 24 * 6) return `Well that doesn't sound right...`;
-      if (hours > 24 * 5) return 'A week?! A mere working week?!';
-      if (hours > 24 * 4) return 'Shit, we can do it!';
-      if (hours > 24 * 3) return 'A'.repeat(20);
-      if (hours > 24 * 2) return `I'll give you 1 ETH if you finish it today.`;
-      if (hours > 24) return 'A'.repeat(200);
-      return 'PANIC MODE ENGAGE!!! gogogogogogogogogogogogogo54321111111glhf';
-    })();
-
-    robot.messageRoom(
-      room,
-      `${title}: ${hours} hours remaining. ${sass}`
-    );
-  });
+      robot.messageRoom(
+        room,
+        `${title}: ${hours} hours remaining. ${getSass(hours)}`
+      );
+    });
 };
 
 const setupCronJob = robot => {
@@ -99,11 +91,15 @@ module.exports = robot => {
   const { brain } = robot;
   setupCronJob(robot);
 
-  robot.hear(/^countdown add '$(.+)' $(.+)$/, res => {
-    const { user, room } = res.message;
+  robot.hear(/^countdown add '(.+)' (.+)$/, res => {
+    ({ user, room } = res.message);
 
     if (isPrivateSlackMessage(res)) {
-      return;
+      return res.send('Countdowns can only be added in a channel.');
+    }
+
+    if (user.slack.tz_offset == null) {
+      return res.send('Please set your time zone in slack first')
     }
 
     const title = res.match[1];
@@ -117,5 +113,7 @@ module.exports = robot => {
     }
 
     addToMap(COUNTDOWNS, key, { title, dueDate, room }, brain);
+
+    return res.send('The countdown begins!');
   });
 };
