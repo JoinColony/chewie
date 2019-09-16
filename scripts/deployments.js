@@ -25,7 +25,9 @@ module.exports = async function(robot) {
   await exec(`gcloud config set project ${process.env.GCLOUD_PROJECT_NAME}`);
   await exec(`gcloud --quiet config set container/cluster ${process.env.GCLOUD_CLUSTER_NAME}`)
   await exec(`gcloud config set compute/zone ${process.env.GCLOUD_CLOUDSDK_COMPUTE_ZONE}`);
-  await exec(`gcloud --quiet container clusters get-credentials ${process.env.GCLOUD_CLUSTER_NAME}`);
+  // It appears this is not needed to patch the containers as we want, so
+  // let's not bother given that it errors
+  // await exec(`gcloud --quiet container clusters get-credentials ${process.env.GCLOUD_CLUSTER_NAME}`);
 
   // Get the devops channel ID. The topic will be used to determine what colour is staging / production when asked to deploy to either.
   let channels = await robot.adapter.client.web.conversations.list();
