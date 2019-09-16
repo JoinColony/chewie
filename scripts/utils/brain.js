@@ -37,8 +37,12 @@ module.exports = brainPrefix => {
 
   const removeFromMap = (mapKey, key, brain) => {
     const map = getMap(mapKey, brain);
+    if (!map[key]) {
+      return false;
+    }
     delete map[key];
     setMap(mapKey, map, brain);
+    return true;
   };
 
   return {

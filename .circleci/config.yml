@@ -13,7 +13,7 @@ jobs:
       - setup_remote_docker
       - run:
           name: Build Docker Image
-          command: docker build -t eu.gcr.io/${GOOGLE_PROJECT_ID}/chewie-${CIRCLE_SHA1} .
+          command: docker build -t eu.gcr.io/${GOOGLE_PROJECT_ID}/chewie:${CIRCLE_SHA1} .
       - run:
           name: Store Service Account
           command: echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json
@@ -27,8 +27,8 @@ jobs:
       - run:
           name: Deploy to Google Cloud
           command: |
-            gcloud docker -- push eu.gcr.io/${GOOGLE_PROJECT_ID}/chewie-${CIRCLE_SHA1}
-            kubectl patch deployment gitbutler -p '{"spec":{"template":{"spec":{"containers":[{"name":"chewie","image":"eu.gcr.io/'${GOOGLE_PROJECT_ID}'/chewie-'${CIRCLE_SHA1}'"}]}}}}'
+            gcloud docker -- push eu.gcr.io/${GOOGLE_PROJECT_ID}/chewie:${CIRCLE_SHA1}
+            kubectl patch deployment gitbutler -p '{"spec":{"template":{"spec":{"containers":[{"name":"chewie","image":"eu.gcr.io/'${GOOGLE_PROJECT_ID}'/chewie:'${CIRCLE_SHA1}'"}]}}}}'
 
 workflows:
   version: 2
