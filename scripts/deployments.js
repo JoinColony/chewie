@@ -210,7 +210,7 @@ module.exports = async function(robot) {
         const productionColourMatches = productionColourRegex.exec(devopsTopic);
         colour = productionColourMatches[1].toLowerCase();
       }
-      await exec('kubectl patch deployment dapp-' + colour +' -p \'{"spec":{"template":{"spec":{"containers":[{"name":"dapp","image":"eu.gcr.io/fluent-aileron-128715/dapp-main:' + matches[2] + '"}]}}}}\'' )
+      await exec('kubectl patch deployment dapp-' + colour +' -p \'{"spec":{"template":{"spec":{"containers":[{"name":"dapp","image":"eu.gcr.io/fluent-aileron-128715/dapp-mainnet:' + matches[2] + '"}]}}}}\'' )
     }
     msg.send('Container patched. Could take up to two minutes to start responding.')
   })
