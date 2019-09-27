@@ -178,14 +178,13 @@ module.exports = async function(robot) {
 
   robot.hear(/!build (goerli|mainnet) ([0-9a-fA-f]*)/, async msg => {
     const buildInfo = await request({
+      method: 'POST',
       uri: `https://circleci.com/api/v1.1/project/github/JoinColony/colonyDapp/tree/${msg.match[2]}`,
-      qs: {
-        'circle-token': process.env.CIRCLE_CI_API_KEY,
+      auth: {
+        'user': process.env.CIRCLE_CI_API_KEY
       },
-      body: {
-        build_parameters: {
-          CIRCLE_JOB: `build-${msg.match[1]}-image`
-        }
+      formData: {
+        'build_parameters[CIRCLE_JOB]': `build-${msg.match[1]}-image`
       },
       json: true,
     })
