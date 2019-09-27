@@ -1,6 +1,7 @@
 // Description:
 //   Used to deploy specified builds to QA
 const exec = require('await-exec')
+const request = require('request-promise-native');
 const { isChannel, isPrivateSlackMessage } = require('./utils/channels');
 
 const getBrain = require('./utils/brain');
@@ -176,9 +177,19 @@ module.exports = async function(robot) {
   })
 
   robot.hear(/!build (goerli|mainnet) ([0-9a-fA-f]*)/, async msg => {
-      const res = await exec('curl -u "' + process.env.CIRCLE_CI_API_KEY + ':" -d "build_parameters[CIRCLE_JOB]=build-' + msg.match[1] + '-image" https://circleci.com/api/v1.1/project/github/JoinColony/colonyDapp/tree/' + msg.match[2]);
-      const output = JSON.parse(res.stdout);
-      msg.send("Once this build is complete, you will be able to issue an appropriate !deploy command:", output.build_url);
+    const buildInfo = await request({
+      uri: `https://circleci.com/api/v1.1/project/github/JoinColony/colonyDapp/tree/${msg.match[2]}`,
+      qs: {
+        'circle-token': process.env.CIRCLE_CI_API_KEY,
+      },
+      body: {
+        build_parameters: {
+          CIRCLE_JOB: `build-${msg.match[1]}-image`
+        }
+      },
+      json: true,
+    })
+    msg.send("Once this build is complete, you will be able to issue an appropriate !deploy command:", buildInfo.build_url);
   });
 
   const deployRegex = /!deploy (qa|staging|production) ([0-9a-fA-f]*)/

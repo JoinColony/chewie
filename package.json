@@ -26,7 +26,9 @@
     "hubot-help": "^0.2.2",
     "hubot-redis-brain": "^0.0.4",
     "hubot-slack": "^4.5.3",
-    "hubot-slack-reaction": "^0.0.4"
+    "hubot-slack-reaction": "^0.0.4",
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.7"
   },
   "engines": {
     "node": "0.10.x"
