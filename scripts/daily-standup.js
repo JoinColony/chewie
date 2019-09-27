@@ -24,16 +24,16 @@ const {
   getCurrentTimeForUser,
   dateIsInRange,
   dateIsOlderThan,
-  parseNaturalDate,
-} = require('./utils/dates');
+  parseNaturalDate
+} = require('./utils/dates')
 
-const { isChannel, isPrivateSlackMessage } = require('./utils/channels');
+const { isChannel, isPrivateSlackMessage } = require('./utils/channels')
 
-const getBrain = require('./utils/brain');
+const getBrain = require('./utils/brain')
 
-const BRAIN_PREFIX = 'standup';
+const BRAIN_PREFIX = 'standup'
 // This is the daily-standup channel. This should be an env variable at some point
-const HUBOT_STANDUP_CHANNEL = 'C0NFZA7T5';
+const HUBOT_STANDUP_CHANNEL = 'C0NFZA7T5'
 // #standup-testing channel
 // const HUBOT_STANDUP_CHANNEL = 'CBX6J6MAA'
 
@@ -44,8 +44,8 @@ const {
   removeFromMap,
   removeMap,
   setMap,
-  updateMap,
-} = getBrain(BRAIN_PREFIX);
+  updateMap
+} = getBrain(BRAIN_PREFIX)
 
 /* User permission helpers */
 const getUser = (userId, brain) => {

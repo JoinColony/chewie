@@ -7,7 +7,7 @@
   "scripts": {
     "start": "env-cmd .env yarn run hubot --name chewie -a slack",
     "dev": "env-cmd .env yarn run hubot --name chewie",
-    "fix": "prettier 'scripts/**/*.js' --write"
+    "format": "prettier 'scripts/**/*.js' --write"
   },
   "dependencies": {
     "@colony/colony-contract-loader-network": "^1.0.1",
