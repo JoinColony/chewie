@@ -1,12 +1,13 @@
 {
   "name": "chewie",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "author": "Scott Street <scott@colony.io>",
   "description": "A handy bot for doing Colony things",
   "scripts": {
     "start": "env-cmd .env yarn run hubot --name chewie -a slack",
-    "dev": "env-cmd .env yarn run hubot --name chewie"
+    "dev": "env-cmd .env yarn run hubot --name chewie",
+    "format": "prettier 'scripts/**/*.js' --write"
   },
   "dependencies": {
     "@colony/colony-contract-loader-network": "^1.0.1",
@@ -32,6 +33,8 @@
     "node": "0.10.x"
   },
   "devDependencies": {
+    "husky": "^3.0.5",
+    "lint-staged": "^9.4.0",
     "prettier": "^1.13.7"
   }
 }

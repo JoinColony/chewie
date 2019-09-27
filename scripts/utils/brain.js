@@ -1,49 +1,48 @@
 module.exports = brainPrefix => {
   const getMap = (key, brain) =>
-    JSON.parse(brain.get(`${brainPrefix}-${key}`)) || {};
+    JSON.parse(brain.get(`${brainPrefix}-${key}`)) || {}
 
   const setMap = (key, value, brain) =>
-    brain.set(`${brainPrefix}-${key}`, JSON.stringify(value));
+    brain.set(`${brainPrefix}-${key}`, JSON.stringify(value))
 
-  const removeMap = (key, brain) =>
-    brain.remove(`${brainPrefix}-${key}`);
+  const removeMap = (key, brain) => brain.remove(`${brainPrefix}-${key}`)
 
   const addToMap = (mapKey, key, value, brain) => {
-    const map = getMap(mapKey, brain);
+    const map = getMap(mapKey, brain)
     // Use incremental number if no key is given
-    key = key || Object.keys(map).length + 1;
+    key = key || Object.keys(map).length + 1
     if (map[key]) {
-      return false;
+      return false
     }
-    map[key] = value;
-    setMap(mapKey, map, brain);
+    map[key] = value
+    setMap(mapKey, map, brain)
     return true
-  };
+  }
 
   const updateMap = (mapKey, key, value, brain) => {
-    const map = getMap(mapKey, brain);
+    const map = getMap(mapKey, brain)
     if (!key || !map[key]) {
-      return false;
+      return false
     }
-    map[key] = value;
-    setMap(mapKey, map, brain);
-    return true;
-  };
+    map[key] = value
+    setMap(mapKey, map, brain)
+    return true
+  }
 
   const getFromMap = (mapKey, key, brain) => {
-    const map = getMap(mapKey, brain);
-    return map[key];
-  };
+    const map = getMap(mapKey, brain)
+    return map[key]
+  }
 
   const removeFromMap = (mapKey, key, brain) => {
-    const map = getMap(mapKey, brain);
+    const map = getMap(mapKey, brain)
     if (!map[key]) {
-      return false;
+      return false
     }
-    delete map[key];
-    setMap(mapKey, map, brain);
-    return true;
-  };
+    delete map[key]
+    setMap(mapKey, map, brain)
+    return true
+  }
 
   return {
     addToMap,
@@ -52,7 +51,6 @@ module.exports = brainPrefix => {
     removeFromMap,
     removeMap,
     setMap,
-    updateMap,
-  };
+    updateMap
+  }
 }
-

@@ -32,12 +32,12 @@ module.exports = function(robot) {
   }
 
   robot.hear(issueRegex, async msg => {
-    let matches, included = [], response = ''
-    while (matches = issueRegex.exec(msg.message.text)) {
-      if (included.indexOf(matches[0]) === -1)
-        included.push(matches[0])
-      else
-        continue
+    let matches,
+      included = [],
+      response = ''
+    while ((matches = issueRegex.exec(msg.message.text))) {
+      if (included.indexOf(matches[0]) === -1) included.push(matches[0])
+      else continue
 
       const issueNumber = matches[2]
 
@@ -51,7 +51,7 @@ module.exports = function(robot) {
       const issue = await getIssue(repo, issueNumber)
       const title = issue.title
       const url = issue.html_url
-      const type = issue.pull_request ? "PR" : "Issue"
+      const type = issue.pull_request ? 'PR' : 'Issue'
 
       response += `${type} #${issueNumber}: ${title} ${url}\n`
     }
