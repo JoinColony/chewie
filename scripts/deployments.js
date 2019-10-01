@@ -1,6 +1,7 @@
 // Description:
 //   Used to deploy specified builds to QA
 const exec = require('await-exec')
+const request = require('request-promise-native');
 const { isChannel, isPrivateSlackMessage } = require('./utils/channels');
 
 const getBrain = require('./utils/brain');
@@ -174,6 +175,21 @@ module.exports = async function(robot) {
       `Could not remove <@${userToRemove}> as ${where} deployer. Maybe they do not have the role?`
     )
   })
+
+  robot.hear(/!build (goerli|mainnet) ([0-9a-fA-f]*)/, async msg => {
+    const buildInfo = await request({
+      method: 'POST',
+      uri: `https://circleci.com/api/v1.1/project/github/JoinColony/colonyDapp/tree/${msg.match[2]}`,
+      auth: {
+        'user': process.env.CIRCLE_CI_API_KEY
+      },
+      formData: {
+        'build_parameters[CIRCLE_JOB]': `build-${msg.match[1]}-image`
+      },
+      json: true,
+    })
+    msg.send("Once this build is complete, you will be able to issue an appropriate !deploy command:", buildInfo.build_url);
+  });
 
   const deployRegex = /!deploy (qa|staging|production) ([0-9a-fA-f]*)/
   robot.hear(deployRegex, async msg => {
