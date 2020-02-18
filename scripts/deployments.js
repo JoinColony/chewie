@@ -30,11 +30,17 @@ module.exports = async function(robot) {
   // let's not bother given that it errors
   // await exec(`gcloud --quiet container clusters get-credentials ${process.env.GCLOUD_CLUSTER_NAME}`);
 
+  await getDeploymentScripts()
+
   // Get the devops channel ID. The topic will be used to determine what colour is staging / production when asked to deploy to either.
   let channels = await robot.adapter.client.web.conversations.list();
   let devopsChannel = channels.channels.filter(channel => channel.name === "devops")[0];
   const devopsid = devopsChannel.id
 
+  async function getDeploymentScripts() {
+    await exec(`rm -rf ./colony-deployment-scripts`);
+    await exec(`git clone https://:${process.env.HUBOT_GITHUB_TOKEN}@github.com/JoinColony/colony-deployment-scripts.git`)
+  }
 
   async function transformUserToID(user) {
     let users = await robot.adapter.client.web.users.list();
@@ -176,58 +182,166 @@ module.exports = async function(robot) {
     )
   })
 
-  robot.hear(/!build (goerli|mainnet) ([0-9a-fA-f]*)/, async msg => {
+  robot.hear(/!build (backend|frontend) ([0-9a-fA-f]*)/, async msg => {
     const buildInfo = await request({
       method: 'POST',
-      uri: `https://circleci.com/api/v1.1/project/github/JoinColony/colonyDapp/tree/${msg.match[2]}`,
+      uri: `https://circleci.com/api/v1.1/project/github/JoinColony/colony-deployment-scripts`,
       auth: {
         'user': process.env.CIRCLE_CI_API_KEY
       },
       formData: {
-        'build_parameters[CIRCLE_JOB]': `build-${msg.match[1]}-image`
+        'build_parameters[CIRCLE_JOB]': `build-${msg.match[1]}-image`,
+        'build_parameters[COMMIT_HASH]': msg.match[2]
       },
       json: true,
     })
     msg.send("Once this build is complete, you will be able to issue an appropriate !deploy command:", buildInfo.build_url);
   });
 
-  const deployRegex = /!deploy (qa|staging|production) ([0-9a-fA-f]*)/
-  robot.hear(deployRegex, async msg => {
+  const toQARegex = /!deploy qa (backend|frontend) ([0-9a-fA-f]*)/
+  robot.hear(toQARegex, async msg => {
     const { brain } = robot;
 
-    const matches = deployRegex.exec(msg.message.text);
-    if (matches[1] === 'qa'){
-      // Check they have permission
-      if (!canDeploy(msg.message.user.id, 'qa', brain)) {
-        return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
-      }
-      await exec('kubectl patch deployment dapp-red -p \'{"spec":{"template":{"spec":{"containers":[{"name":"dapp","image":"eu.gcr.io/fluent-aileron-128715/dapp-goerli:' + matches[2] + '"}]}}}}\'')
-    } else if (matches[1] === 'staging' || matches[1] === 'production') {
-      // Get colours
-      const response = await robot.adapter.client.web.channels.info(devopsid);
-      devopsChannel = response.channel;
-      const devopsTopic = devopsChannel.topic.value;
-      let colour;
-
-      if (matches[1] === 'staging'){
-        // check they have staging permission
-        if (!canDeploy(msg.message.user.id, 'staging', brain)) {
-          return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
-        }
-        const stagingColourRegex = /Currently staging: ([a-zA-Z]*)/
-        const stagingColourMatches = stagingColourRegex.exec(devopsTopic);
-        colour = stagingColourMatches[1].toLowerCase();
-      } else {
-        // check they have production permission
-        if (!canDeploy(msg.message.user.id, 'production', brain)) {
-          return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
-        }
-        const productionColourRegex = /Currently production\/live: ([a-zA-Z]*)/
-        const productionColourMatches = productionColourRegex.exec(devopsTopic);
-        colour = productionColourMatches[1].toLowerCase();
-      }
-      await exec('kubectl patch deployment dapp-' + colour +' -p \'{"spec":{"template":{"spec":{"containers":[{"name":"dapp","image":"eu.gcr.io/fluent-aileron-128715/dapp-mainnet:' + matches[2] + '"}]}}}}\'' )
+    const matches = toQARegex.exec(msg.message.text);
+    // Check they have permission
+    if (!canDeploy(msg.message.user.id, 'qa', brain)) {
+      return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
     }
-    msg.send('Container patched. Could take up to two minutes to start responding.')
+    if (matches[1] === 'frontend') {
+      const res = await exec(`AUTO=true FRONTEND_IMAGE_NAME=eu.gcr.io/fluent-aileron-128715/app-frontend:${matches[2]} ./colony-deployment-scripts/toQA.sh`)
+      msg.message.thread_ts = msg.message.rawMessage.ts;
+      if (res.stdout) {
+        msg.send(`Stdout:
+          \`\`\`
+          ${res.stdout}
+          \`\`\``);
+      }
+      if (res.stderr){
+        msg.send(`Stderr:
+          \`\`\`
+          ${res.stderr}
+          \`\`\``);
+      }
+    } else if (matches[1] === 'backend' ) {
+      const res = await exec(`AUTO=true APP_IMAGE_NAME=eu.gcr.io/fluent-aileron-128715/app-backend:${matches[2]} ./colony-deployment-scripts/toQA.sh`)
+      msg.message.thread_ts = msg.message.rawMessage.ts;
+      if (res.stdout) {
+        msg.send(`Stdout:
+          \`\`\`
+          ${res.stdout}
+          \`\`\``);
+      }
+      if (res.stderr){
+        msg.send(`Stderr:
+          \`\`\`
+          ${res.stderr}
+          \`\`\``);
+      }
+    }
+  });
+
+  const toStagingRegex = /!deploy staging/
+  robot.hear(toStagingRegex, async msg => {
+    const { brain } = robot;
+
+    // check they have staging permission
+    if (!canDeploy(msg.message.user.id, 'staging', brain)) {
+      return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
+    }
+
+    // Get colours
+    const response = await robot.adapter.client.web.channels.info(devopsid);
+    devopsChannel = response.channel;
+    const devopsTopic = devopsChannel.topic.value;
+
+    const stagingColourRegex = /Currently staging: ([a-zA-Z]*)/
+    const stagingColourMatches = stagingColourRegex.exec(devopsTopic);
+    const stagingColour = stagingColourMatches[1].toLowerCase();
+    const productionColourRegex = /Currently production\/live: ([a-zA-Z]*)/
+    const productionColourMatches = productionColourRegex.exec(devopsTopic);
+    const productionColour = productionColourMatches[1].toLowerCase();
+    msg.message.thread_ts = msg.message.rawMessage.ts;
+    msg.send(`Will deploy to staging, identified as ${stagingColour}`)
+    try {
+      const res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/toStaging.sh`)
+      if (res.stdout) {
+        msg.send(`Stdout:
+          \`\`\`
+          ${res.stdout}
+          \`\`\``);
+      }
+      if (res.stderr){
+        msg.send(`Stderr:
+          \`\`\`
+          ${res.stderr}
+          \`\`\``);
+      }
+    } catch (res){
+      if (res.stdout) {
+        msg.send(`Stdout:
+          \`\`\`
+          ${res.stdout}
+          \`\`\``);
+      }
+      if (res.stderr){
+        msg.send(`Stderr:
+          \`\`\`
+          ${res.stderr}
+          \`\`\``);
+      }
+    }
   })
+
+  const toProductionRegex = /!deploy production/
+  robot.hear(toProductionRegex, async msg => {
+    const { brain } = robot;
+
+    // check they have staging permission
+    if (!canDeploy(msg.message.user.id, 'production', brain)) {
+      return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
+    }
+
+    // Get colours
+    const response = await robot.adapter.client.web.channels.info(devopsid);
+    devopsChannel = response.channel;
+    const devopsTopic = devopsChannel.topic.value;
+
+    const stagingColourRegex = /Currently staging: ([a-zA-Z]*)/
+    const stagingColourMatches = stagingColourRegex.exec(devopsTopic);
+    const stagingColour = stagingColourMatches[1].toLowerCase();
+    const productionColourRegex = /Currently production\/live: ([a-zA-Z]*)/
+    const productionColourMatches = productionColourRegex.exec(devopsTopic);
+    const productionColour = productionColourMatches[1].toLowerCase();
+    msg.message.thread_ts = msg.message.rawMessage.ts;
+    msg.send(`Will deploy to production. Current production is ${productionColour}. This will become staging, and staging (currently ${stagingColour}) will become production. Be sure to change the topic in #devops if successful.`)
+    try {
+      const res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/toStaging.sh`)
+      if (res.stdout) {
+        msg.send(`Stdout:
+          \`\`\`
+          ${res.stdout}
+          \`\`\``);
+      }
+      if (res.stderr){
+        msg.send(`Stderr:
+          \`\`\`
+          ${res.stderr}
+          \`\`\``);
+      }
+    } catch (res){
+      if (res.stdout) {
+        msg.send(`Stdout:
+          \`\`\`
+          ${res.stdout}
+          \`\`\``);
+      }
+      if (res.stderr){
+        msg.send(`Stderr:
+          \`\`\`
+          ${res.stderr}
+          \`\`\``);
+      }
+    }
+  })
+
 }
