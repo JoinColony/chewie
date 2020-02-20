@@ -39,7 +39,7 @@ module.exports = async function(robot) {
 
   async function getDeploymentScripts() {
     await exec(`rm -rf ./colony-deployment-scripts`);
-    await exec(`git clone https://:${process.env.HUBOT_GITHUB_TOKEN}@github.com/JoinColony/colony-deployment-scripts.git`)
+    await exec(`git clone https://${process.env.HUBOT_GITHUB_TOKEN}@github.com/JoinColony/colony-deployment-scripts.git`)
   }
 
   async function transformUserToID(user) {
