@@ -136,6 +136,38 @@ module.exports = async function(robot) {
     )
   })
 
+  robot.hear(/!deployment admin remove (.+)/, async (res) => {
+    const { user } = res.message
+    const { brain } = robot
+    const who = res.match[1].toLowerCase();
+
+    if (!isPrivateSlackMessage(res)) return
+    if (!noAdmins(brain) && !isAdmin(user, brain)) return
+    const [userLookupSuccess, userIDToAdd] = await transformUserToID(who)
+    if (!userLookupSuccess){
+      return msg.send(userIDToAdd);
+    }
+
+    if (userToRemove && removeUserWithRole(userToRemove, `admin`, brain)) {
+      return res.send(
+        `I removed <@${userToRemove}> as a deployment admin.`
+      )
+    }
+    return res.send(
+      `Could not remove <@${userToRemove}> as deployment admin. Maybe they do not have the role?`
+    )
+  })
+
+  robot.hear(/!deployment update scripts/, async (res) => {
+    res.send(`Updating deployment scripts`);
+    try {
+      await getDeploymentScripts();
+    } catch (err) {
+      return res.send(`An error occurred: `, err);
+    }
+    res.send(`Deployment scripts updated successfully`);
+  })
+
   robot.hear(/!deployment add (.+) (.+)/, async (res) => {
     const { user } = res.message
     const { brain } = robot
