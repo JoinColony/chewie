@@ -347,7 +347,7 @@ module.exports = async function(robot) {
     msg.message.thread_ts = msg.message.rawMessage.ts;
     msg.send(`Will deploy to production. Current production is ${productionColour}. This will become staging, and staging (currently ${stagingColour}) will become production. Be sure to change the topic in #devops if successful.`)
     try {
-      const res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/toStaging.sh`)
+      const res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/stagingToProduction.sh`)
       if (res.stdout) {
         msg.send(`Stdout:
           \`\`\`
