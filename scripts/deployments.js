@@ -214,23 +214,49 @@ module.exports = async function(robot) {
     )
   })
 
-  robot.hear(/!build (backend|frontend) ([0-9a-fA-f]*)/, async msg => {
+  robot.hear(/!build (backend|frontend) ([0-9a-fA-f]*)( dev)?/, async msg => {
+    const formData = {
+      'build_parameters[CIRCLE_JOB]': `build-${msg.match[1]}-image`,
+      'build_parameters[COMMIT_HASH]': msg.match[2]
+    }
+    if (msg.match[3]){
+      formData['build_parameters[DEV]'] = "true";
+    }
+    console.log(formData);
     const buildInfo = await request({
       method: 'POST',
       uri: `https://circleci.com/api/v1.1/project/github/JoinColony/colony-deployment-scripts`,
       auth: {
         'user': process.env.CIRCLE_CI_API_KEY
       },
-      formData: {
-        'build_parameters[CIRCLE_JOB]': `build-${msg.match[1]}-image`,
-        'build_parameters[COMMIT_HASH]': msg.match[2]
-      },
+      formData,
       json: true,
     })
     msg.send("Once this build is complete, you will be able to issue an appropriate !deploy command:", buildInfo.build_url);
   });
 
-  const toQARegex = /!deploy qa (backend|frontend) ([0-9a-fA-f]*)/
+  async function output(msg, res){
+    if (res.stdout) {
+        msg.send(`Stdout:
+          \`\`\`
+          ${res.stdout}
+          \`\`\``);
+    }
+    if (res.stderr){
+      msg.send(`Stderr:
+        \`\`\`
+        ${res.stderr}
+        \`\`\``);
+    }
+    if (!res.stderr && !res.stdout){
+      msg.send(`Presumed error:
+        \`\`\`
+        ${res}
+        \`\`\``);
+    }
+  }
+
+  const toQARegex = /!deploy qa (backend|frontend) ([0-9a-fA-f]*)( dev)?/
   robot.hear(toQARegex, async msg => {
     const { brain } = robot;
 
@@ -239,37 +265,23 @@ module.exports = async function(robot) {
     if (!canDeploy(msg.message.user.id, 'qa', brain)) {
       return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
     }
-    if (matches[1] === 'frontend') {
-      const res = await exec(`AUTO=true FRONTEND_IMAGE_NAME=eu.gcr.io/fluent-aileron-128715/app-frontend:${matches[2]} ./colony-deployment-scripts/toQA.sh`)
-      msg.message.thread_ts = msg.message.rawMessage.ts;
-      if (res.stdout) {
-        msg.send(`Stdout:
-          \`\`\`
-          ${res.stdout}
-          \`\`\``);
+    let res;
+    msg.message.thread_ts = msg.message.rawMessage.ts;
+    msg.send("Deploying to QA")
+    try {
+      if (matches[1] === 'frontend') {
+        let imageName = `eu.gcr.io/fluent-aileron-128715/app-frontend:${matches[2]}`
+        if (matches[3]) {
+          imageName += "-dev"
+        }
+        res = await exec(`AUTO=true FRONTEND_IMAGE_NAME=${imageName} ./colony-deployment-scripts/toQA.sh`)
+      } else if (matches[1] === 'backend' ) {
+        res = await exec(`AUTO=true APP_IMAGE_NAME=eu.gcr.io/fluent-aileron-128715/app-backend:${matches[2]} ./colony-deployment-scripts/toQA.sh`)
       }
-      if (res.stderr){
-        msg.send(`Stderr:
-          \`\`\`
-          ${res.stderr}
-          \`\`\``);
-      }
-    } else if (matches[1] === 'backend' ) {
-      const res = await exec(`AUTO=true APP_IMAGE_NAME=eu.gcr.io/fluent-aileron-128715/app-backend:${matches[2]} ./colony-deployment-scripts/toQA.sh`)
-      msg.message.thread_ts = msg.message.rawMessage.ts;
-      if (res.stdout) {
-        msg.send(`Stdout:
-          \`\`\`
-          ${res.stdout}
-          \`\`\``);
-      }
-      if (res.stderr){
-        msg.send(`Stderr:
-          \`\`\`
-          ${res.stderr}
-          \`\`\``);
-      }
+    } catch (err) {
+      res = err;
     }
+    await output(msg, res);
   });
 
   const toStagingRegex = /!deploy staging/
@@ -294,34 +306,13 @@ module.exports = async function(robot) {
     const productionColour = productionColourMatches[1].toLowerCase();
     msg.message.thread_ts = msg.message.rawMessage.ts;
     msg.send(`Will deploy to staging, identified as ${stagingColour}`)
+    let res;
     try {
-      const res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/toStaging.sh`)
-      if (res.stdout) {
-        msg.send(`Stdout:
-          \`\`\`
-          ${res.stdout}
-          \`\`\``);
-      }
-      if (res.stderr){
-        msg.send(`Stderr:
-          \`\`\`
-          ${res.stderr}
-          \`\`\``);
-      }
-    } catch (res){
-      if (res.stdout) {
-        msg.send(`Stdout:
-          \`\`\`
-          ${res.stdout}
-          \`\`\``);
-      }
-      if (res.stderr){
-        msg.send(`Stderr:
-          \`\`\`
-          ${res.stderr}
-          \`\`\``);
-      }
+      res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/toStaging.sh`)
+    } catch (err){
+      res = err;
     }
+    await output(msg, res);
   })
 
   const toProductionRegex = /!deploy production/
@@ -346,34 +337,13 @@ module.exports = async function(robot) {
     const productionColour = productionColourMatches[1].toLowerCase();
     msg.message.thread_ts = msg.message.rawMessage.ts;
     msg.send(`Will deploy to production. Current production is ${productionColour}. This will become staging, and staging (currently ${stagingColour}) will become production. Be sure to change the topic in #devops if successful.`)
+    let res;
     try {
-      const res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/stagingToProduction.sh`)
-      if (res.stdout) {
-        msg.send(`Stdout:
-          \`\`\`
-          ${res.stdout}
-          \`\`\``);
-      }
-      if (res.stderr){
-        msg.send(`Stderr:
-          \`\`\`
-          ${res.stderr}
-          \`\`\``);
-      }
-    } catch (res){
-      if (res.stdout) {
-        msg.send(`Stdout:
-          \`\`\`
-          ${res.stdout}
-          \`\`\``);
-      }
-      if (res.stderr){
-        msg.send(`Stderr:
-          \`\`\`
-          ${res.stderr}
-          \`\`\``);
-      }
+      res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/stagingToProduction.sh`)
+    } catch (err){
+      res = err;
     }
+    await output(msg, res);
   })
 
 }
