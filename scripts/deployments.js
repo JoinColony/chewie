@@ -256,7 +256,7 @@ module.exports = async function(robot) {
     }
   }
 
-  const toQARegex = /!deploy qa (backend|frontend) ([0-9a-fA-f]*)( dev)?/
+  const toQARegex = /^!deploy qa (backend|frontend) ([0-9a-fA-f]*)( dev)?$/
   robot.hear(toQARegex, async msg => {
     const { brain } = robot;
 
@@ -284,7 +284,7 @@ module.exports = async function(robot) {
     await output(msg, res);
   });
 
-  const toStagingRegex = /!deploy staging/
+  const toStagingRegex = /^!deploy staging$/
   robot.hear(toStagingRegex, async msg => {
     const { brain } = robot;
 
@@ -315,7 +315,7 @@ module.exports = async function(robot) {
     await output(msg, res);
   })
 
-  const toProductionRegex = /!deploy production/
+  const toProductionRegex = /^!deploy production$/
   robot.hear(toProductionRegex, async msg => {
     const { brain } = robot;
 
