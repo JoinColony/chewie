@@ -235,6 +235,31 @@ module.exports = async function(robot) {
     msg.send("Once this build is complete, you will be able to issue an appropriate !deploy command:", buildInfo.build_url);
   });
 
+  robot.hear(/!build gh (backend|frontend) ([0-9a-fA-f]*)( dev)?/, async msg => {
+    const formData = {
+      'event_type': `Build ${msg.match[1]} request from Chewie`,
+      'client_payload':{
+        JOB: `build-${msg.match[1]}-image`,
+        COMMIT_HASH: msg.match[2]
+      }
+    }
+    if (msg.match[3]){
+      formData['client_payload[DEV]'] = "true";
+    }
+    await request({
+      method: 'POST',
+      uri: `https://api.github.com/repos/area/colony-deployment-scripts/dispatches`,
+      keepAlive: false,
+      body: JSON.stringify(formData),
+      headers:{
+        "Accept": "application/vnd.github.everest-preview+json",
+        "Authorization": `token ${process.env.HUBOT_GITHUB_TOKEN}`,
+        "User-Agent": "JoinColony/chewie",
+      }
+    });
+    msg.send("Keep an eye on the build here: https://github.com/area/colony-deployment-scripts/actions . Once complete, you will be able to issue and appropriate !deploy command")
+  });
+
   async function output(msg, res){
     if (res.stdout) {
         msg.send(`Stdout:
