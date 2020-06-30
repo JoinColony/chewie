@@ -53,7 +53,7 @@ module.exports = function(robot) {
       const url = issue.html_url
       const type = issue.pull_request ? "PR" : "Issue"
 
-      response += `${type} #${issueNumber}: ${title} ${url}\n`
+      response += `**${type} #${issueNumber}:** ${title} <${url}>\n`
     }
     msg.send(response.trim())
   })

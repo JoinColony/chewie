@@ -6,6 +6,7 @@
   "description": "A handy bot for doing Colony things",
   "scripts": {
     "start": "env-cmd .env yarn run hubot --name chewie -a slack",
+    "start-discord": "env-cmd .env yarn run hubot --name chewie -a discord",
     "dev": "env-cmd .env yarn run hubot --name chewie"
   },
   "dependencies": {
@@ -15,20 +16,25 @@
     "@slack/client": "^4.3.1",
     "await-exec": "^0.1.2",
     "chrono-node": "^1.3.5",
+    "coffee-script": "^1.12.7",
     "cron": "^1.3.0",
     "env-cmd": "^8.0.2",
     "ethers": "^3.0.21",
     "figma-js": "^1.3.4",
     "githubot": "^1.0.1",
-    "hubot": "^2.19.0",
+    "hubot": "^3.3.2",
     "hubot-diagnostics": "0.0.2",
+    "hubot-discobot": "^1.0.2",
+    "hubot-discord": "^2.1.0",
     "hubot-github-status": "^0.2.1",
     "hubot-help": "^0.2.2",
     "hubot-redis-brain": "^0.0.4",
     "hubot-slack": "^4.5.3",
     "hubot-slack-reaction": "^0.0.4",
+    "moment-timezone": "^0.5.31",
     "request": "^2.88.0",
-    "request-promise-native": "^1.0.7"
+    "request-promise-native": "^1.0.7",
+    "spacetime-informal": "^0.3.0"
   },
   "engines": {
     "node": "0.10.x"

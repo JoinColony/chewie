@@ -26,7 +26,8 @@ const {
   parseNaturalDate,
 } = require('./utils/dates');
 
-const { isPrivateSlackMessage } = require('./utils/channels');
+const { isPrivateDiscordMessage } = require('./utils/channels');
+const getTimezoneFromMap = getBrain('timezones').getFromMap
 
 const BRAIN_PREFIX = 'countdown';
 const COUNTDOWNS = 'countdowns';
@@ -65,7 +66,7 @@ const processCountdowns = robot => {
     ([key, { title, dueDate, room }]) => {
       const diff = new Date(dueDate).getTime() - new Date(currentDate).getTime();
 
-      if (diff < 0) {
+      if (diff <= 0) {
         robot.messageRoom(room, `${title}: due date elapsed!`);
         return removeFromMap(COUNTDOWNS, key, brain);
       }
@@ -100,16 +101,17 @@ module.exports = robot => {
   robot.hear(/^countdown add '(.+)' (.+)$/, res => {
     const { message: { user, room }, match } = res;
 
-    if (isPrivateSlackMessage(res)) {
+    if (isPrivateDiscordMessage(robot.client, res)) {
       return res.send('Countdowns can only be added in a channel.');
     }
 
-    if (user.slack.tz_offset == null) {
-      return res.send('Please set your time zone in slack first')
+    const zone = getTimezoneFromMap('users', user.id, robot.brain);
+    if (zone == null) {
+      return res.send('Please set your time zone via a PM to me using the `!timezone set <Timezone>` command first')
     }
 
     const title = match[1];
-    const dueDate = parseNaturalDate(match[2], user);
+    const dueDate = parseNaturalDate(match[2], user.id, robot);
 
     const key = getKey(title);
     const existing = getFromMap(COUNTDOWNS, key, brain);

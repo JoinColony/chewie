@@ -10,4 +10,4 @@ RUN yarn || \
   ((if [ -f yarn-error.log ]; then \
       cat yarn-error.log; \
     fi) && false)
-CMD yarn start
+CMD yarn start-discord

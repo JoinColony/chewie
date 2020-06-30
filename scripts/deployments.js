@@ -2,11 +2,11 @@
 //   Used to deploy specified builds to QA
 const exec = require('await-exec')
 const request = require('request-promise-native');
-const { isChannel, isPrivateSlackMessage } = require('./utils/channels');
+const { isChannel, isPrivateDiscordMessage } = require('./utils/channels');
 
 const getBrain = require('./utils/brain');
 
-const BRAIN_PREFIX = 'deployment';
+const BRAIN_PREFIX = 'deployment-discord';
 
 const {
   addToMap,
@@ -33,27 +33,25 @@ module.exports = async function(robot) {
   await getDeploymentScripts()
 
   // Get the devops channel ID. The topic will be used to determine what colour is staging / production when asked to deploy to either.
-  let channels = await robot.adapter.client.web.conversations.list();
-  let devopsChannel = channels.channels.filter(channel => channel.name === "devops")[0];
-  const devopsid = devopsChannel.id
+  const devopsChannel = robot.client.channels.find(channel => channel.name === "chewie-skunkworks");
 
   async function getDeploymentScripts() {
     await exec(`rm -rf ./colony-deployment-scripts`);
     await exec(`git clone https://${process.env.HUBOT_GITHUB_TOKEN}@github.com/JoinColony/colony-deployment-scripts.git`)
   }
 
-  async function transformUserToID(user) {
-    let users = await robot.adapter.client.web.users.list();
-    users = users.members;
-    users = users.filter(u => (u.profile.display_name===user || u.name === user || u.id===user));
-    if (users.length === 0){
-      return [false, "Couldn't find such a user"];
-    } else if (users.length > 1){
-      return [false, "More than one user matched - be more specific"];
-    } else {
-      return [true, users[0].id];
-    }
-  }
+  // async function transformUserToID(user) {
+  //   let users = await robot.adapter.client.web.users.list();
+  //   users = users.members;
+  //   users = users.filter(u => (u.profile.display_name===user || u.name === user || u.id===user));
+  //   if (users.length === 0){
+  //     return [false, "Couldn't find such a user"];
+  //   } else if (users.length > 1){
+  //     return [false, "More than one user matched - be more specific"];
+  //   } else {
+  //     return [true, users[0].id];
+  //   }
+  // }
 
   const canDeploy = (userid, where, brain) => {
     const users = getMap(`${where}Deployers`, brain);
@@ -96,8 +94,7 @@ module.exports = async function(robot) {
   robot.hear(/!deployment permissions/, async(res) => {
     const { brain } = robot
     const { user } = res.message
-
-    if (!isPrivateSlackMessage(res)) return
+    if (!isPrivateDiscordMessage(robot.client, res)) return
     if (!noAdmins(brain) && !isAdmin(user, brain)) return
 
 
@@ -115,20 +112,19 @@ module.exports = async function(robot) {
 
   });
 
-  robot.hear(/!deployment admin add (.+)/, async (res) => {
+  robot.hear(/!deployment admin add @(.+)/, async (res) => {
     const { user } = res.message
     const { brain } = robot
-    const who = res.match[1].toLowerCase();
-
-    if (!isPrivateSlackMessage(res)) return
+    // Can't @ users not in a chat with you, so this needs to be in public now
+    // if (!isPrivateDiscordMessage(robot.client, res)) return
     if (!noAdmins(brain) && !isAdmin(user, brain)) return
-    const [userLookupSuccess, userIDToAdd] = await transformUserToID(who)
-    if (!userLookupSuccess){
-      return msg.send(userIDToAdd);
-    }
-    if (userIDToAdd && addUserWithRole(userIDToAdd, 'admin', brain)) {
+    const channel = robot.client.channels.find(x => x.id == res.message.room)
+    const message = await channel.fetchMessage(res.message.id)
+    const who = message.mentions.users.first().id;
+
+    if (addUserWithRole(who, 'admin', brain)) {
       return res.send(
-        `I added <@${userIDToAdd}> as a deployment admin.`
+        `I added <@${who}> as a deployment admin.`
       )
     }
     return res.send(
@@ -136,25 +132,25 @@ module.exports = async function(robot) {
     )
   })
 
-  robot.hear(/!deployment admin remove (.+)/, async (res) => {
+  robot.hear(/!deployment admin remove @(.+)/, async (res) => {
     const { user } = res.message
     const { brain } = robot
-    const who = res.match[1].toLowerCase();
 
-    if (!isPrivateSlackMessage(res)) return
+    // Can't @ users not in a chat with you, so this needs to be in public now
+    // if (!isPrivateDiscordMessage(robot.client, res)) return
     if (!noAdmins(brain) && !isAdmin(user, brain)) return
-    const [userLookupSuccess, userIDToAdd] = await transformUserToID(who)
-    if (!userLookupSuccess){
-      return msg.send(userIDToAdd);
-    }
 
-    if (userToRemove && removeUserWithRole(userToRemove, `admin`, brain)) {
+    const channel = robot.client.channels.find(x => x.id == res.message.room)
+    const message = await channel.fetchMessage(res.message.id)
+    const who = message.mentions.users.first().id;
+
+    if (removeUserWithRole(who, `admin`, brain)) {
       return res.send(
-        `I removed <@${userToRemove}> as a deployment admin.`
+        `I removed <@${who}> as a deployment admin.`
       )
     }
     return res.send(
-      `Could not remove <@${userToRemove}> as deployment admin. Maybe they do not have the role?`
+      `Could not remove <@${who}> as deployment admin. Maybe they do not have the role?`
     )
   })
 
@@ -168,74 +164,51 @@ module.exports = async function(robot) {
     res.send(`Deployment scripts updated successfully`);
   })
 
-  robot.hear(/!deployment add (.+) (.+)/, async (res) => {
-    const { user } = res.message
-    const { brain } = robot
-    const where = res.match[1].toLowerCase();
-    const who = res.match[2]
-
-    if (!isPrivateSlackMessage(res)) return
-    if (!noAdmins(brain) && !isAdmin(user, brain)) return
-    const [userLookupSuccess, userIDToAdd] = await transformUserToID(who)
-    if (!userLookupSuccess){
-      return msg.send(userIDToAdd);
-    }
-    if (userIDToAdd && addUserWithRole(userIDToAdd, `${where}Deployer`, brain)) {
-      return res.send(
-        `I added <@${userIDToAdd}> as ${where} deployer.`
-      )
-    }
-    return res.send(
-      `Could not add <@${userIDToAdd}> as a deployer. Maybe they do not exist or are already?`
-    )
-  })
-
-
-  robot.hear(/!deployment remove (.+) (.+)/, async (res) => {
+  robot.hear(/!deployment add ([a-z]+) (.+)/, async (res) => {
     const { user } = res.message
     const { brain } = robot
     const where = res.match[1].toLowerCase();
     if (where !== "qa" && where !== "staging" && where !== "production") { return }
-    const who = res.match[2];
 
-    if (!isPrivateSlackMessage(res)) return
+    const channel = robot.client.channels.find(x => x.id == res.message.room)
+    const message = await channel.fetchMessage(res.message.id)
+    const who = message.mentions.users.first().id;
     if (!noAdmins(brain) && !isAdmin(user, brain)) return
-    const [userLookupSuccess, userToRemove] = await transformUserToID(res.match[2])
-    if (!userLookupSuccess){
-      return res.send(userToRemove);
-    }
-    if (userToRemove && removeUserWithRole(userToRemove, `${where}Deployer`, brain)) {
+
+    if (addUserWithRole(who, `${where}Deployer`, brain)) {
       return res.send(
-        `I removed <@${userToRemove}> as ${where} deployer.`
+        `I added <@${who}> as ${where} deployer.`
       )
     }
     return res.send(
-      `Could not remove <@${userToRemove}> as ${where} deployer. Maybe they do not have the role?`
+      `Could not add <@${who}> as a deployer. Maybe they do not exist or are already?`
+    )
+  })
+
+
+  robot.hear(/!deployment remove ([a-z]+) (.+)/, async (res) => {
+    const { user } = res.message
+    const { brain } = robot
+    const where = res.match[1].toLowerCase();
+    if (where !== "qa" && where !== "staging" && where !== "production") { return }
+    const channel = robot.client.channels.find(x => x.id == res.message.room)
+    const message = await channel.fetchMessage(res.message.id)
+    const who = message.mentions.users.first().id;
+
+    if (!noAdmins(brain) && !isAdmin(user, brain)) return
+
+    if (removeUserWithRole(who, `${where}Deployer`, brain)) {
+      return res.send(
+        `I removed <@${who}> as ${where} deployer.`
+      )
+    }
+    return res.send(
+      `Could not remove <@${who}> as ${where} deployer. Maybe they do not have the role?`
     )
   })
 
   robot.hear(/!build (backend|frontend) ([0-9a-fA-f]*)( dev)?/, async msg => {
-    const formData = {
-      'build_parameters[CIRCLE_JOB]': `build-${msg.match[1]}-image`,
-      'build_parameters[COMMIT_HASH]': msg.match[2]
-    }
-    if (msg.match[3]){
-      formData['build_parameters[DEV]'] = "true";
-    }
-    console.log(formData);
-    const buildInfo = await request({
-      method: 'POST',
-      uri: `https://circleci.com/api/v1.1/project/github/JoinColony/colony-deployment-scripts`,
-      auth: {
-        'user': process.env.CIRCLE_CI_API_KEY
-      },
-      formData,
-      json: true,
-    })
-    msg.send("Once this build is complete, you will be able to issue an appropriate !deploy command:", buildInfo.build_url);
-  });
-
-  robot.hear(/!build gh (backend|frontend) ([0-9a-fA-f]*)( dev)?/, async msg => {
+    if (!isDeployer(msg.message.user.id)) return;
     const formData = {
       'event_type': `Build ${msg.match[1]} request from Chewie`,
       'client_payload':{
@@ -244,11 +217,11 @@ module.exports = async function(robot) {
       }
     }
     if (msg.match[3]){
-      formData['client_payload[DEV]'] = "true";
+      formData['client_payload']["DEV"] = "true";
     }
     await request({
       method: 'POST',
-      uri: `https://api.github.com/repos/area/colony-deployment-scripts/dispatches`,
+      uri: `https://api.github.com/repos/joinColony/colony-deployment-scripts/dispatches`,
       keepAlive: false,
       body: JSON.stringify(formData),
       headers:{
@@ -257,7 +230,7 @@ module.exports = async function(robot) {
         "User-Agent": "JoinColony/chewie",
       }
     });
-    msg.send("Keep an eye on the build here: https://github.com/area/colony-deployment-scripts/actions . Once complete, you will be able to issue and appropriate !deploy command")
+    msg.send("Keep an eye on the build here: https://github.com/joinColony/colony-deployment-scripts/actions . Once complete, you will be able to issue and appropriate !deploy command")
   });
 
   async function output(msg, res){
@@ -291,7 +264,6 @@ module.exports = async function(robot) {
       return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
     }
     let res;
-    msg.message.thread_ts = msg.message.rawMessage.ts;
     msg.send("Deploying to QA")
     try {
       if (matches[1] === 'frontend') {
@@ -309,6 +281,28 @@ module.exports = async function(robot) {
     await output(msg, res);
   });
 
+  function isDeployer(id){
+    const { brain } = robot;
+    return canDeploy(id, 'qa', brain) || canDeploy(id, 'staging', brain) || canDeploy(id, 'production', brain)
+  }
+
+  async function getColours(){
+    const devopsTopic = await devopsChannel.topic;
+
+    const stagingColourRegex = /Currently staging: ([a-zA-Z]*)/
+    const stagingColourMatches = stagingColourRegex.exec(devopsTopic);
+    const stagingColour = stagingColourMatches[1].toLowerCase();
+    const productionColourRegex = /Currently production\/live: ([a-zA-Z]*)/
+    const productionColourMatches = productionColourRegex.exec(devopsTopic);
+    const productionColour = productionColourMatches[1].toLowerCase();
+    return {stagingColour, productionColour}
+  }
+
+  robot.hear(/!deploy colours/, async msg => {
+    const {stagingColour, productionColour} = await getColours();
+    msg.send(`Found staging as: ${stagingColour} and production as ${productionColour}`)
+  })
+
   const toStagingRegex = /^!deploy staging$/
   robot.hear(toStagingRegex, async msg => {
     const { brain } = robot;
@@ -318,18 +312,7 @@ module.exports = async function(robot) {
       return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
     }
 
-    // Get colours
-    const response = await robot.adapter.client.web.channels.info(devopsid);
-    devopsChannel = response.channel;
-    const devopsTopic = devopsChannel.topic.value;
-
-    const stagingColourRegex = /Currently staging: ([a-zA-Z]*)/
-    const stagingColourMatches = stagingColourRegex.exec(devopsTopic);
-    const stagingColour = stagingColourMatches[1].toLowerCase();
-    const productionColourRegex = /Currently production\/live: ([a-zA-Z]*)/
-    const productionColourMatches = productionColourRegex.exec(devopsTopic);
-    const productionColour = productionColourMatches[1].toLowerCase();
-    msg.message.thread_ts = msg.message.rawMessage.ts;
+    const {stagingColour, productionColour} = await getColours();
     msg.send(`Will deploy to staging, identified as ${stagingColour}`)
     let res;
     try {
@@ -350,17 +333,7 @@ module.exports = async function(robot) {
     }
 
     // Get colours
-    const response = await robot.adapter.client.web.channels.info(devopsid);
-    devopsChannel = response.channel;
-    const devopsTopic = devopsChannel.topic.value;
-
-    const stagingColourRegex = /Currently staging: ([a-zA-Z]*)/
-    const stagingColourMatches = stagingColourRegex.exec(devopsTopic);
-    const stagingColour = stagingColourMatches[1].toLowerCase();
-    const productionColourRegex = /Currently production\/live: ([a-zA-Z]*)/
-    const productionColourMatches = productionColourRegex.exec(devopsTopic);
-    const productionColour = productionColourMatches[1].toLowerCase();
-    msg.message.thread_ts = msg.message.rawMessage.ts;
+    const {stagingColour, productionColour} = await getColours();
     msg.send(`Will deploy to production. Current production is ${productionColour}. This will become staging, and staging (currently ${stagingColour}) will become production. Be sure to change the topic in #devops if successful.`)
     let res;
     try {

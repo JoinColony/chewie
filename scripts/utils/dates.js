@@ -1,4 +1,8 @@
 const chrono = require('chrono-node');
+const moment = require('moment-timezone');
+const getBrain = require('./brain');
+const getTimezoneFromMap = getBrain('timezones').getFromMap;
+
 
 const getOffsetDate = (offset, timestamp = Date.now()) => {
   const d = new Date(timestamp + offset * 60 * 60 * 1000);
@@ -16,19 +20,28 @@ const getOffsetHour = offset => {
 };
 
 // Returns the current date for a specific user
-const getCurrentDateForUser = user => {
-  const offset = user.slack.tz_offset / (60 * 60);
-  return getOffsetDate(offset);
+const getCurrentDateForUser = (robot, user) => {
+  // const offset = user.slack.tz_offset / (60 * 60);
+  // return getOffsetDate(offset);
+  zone = getTimezoneFromMap('users', user, robot.brain);
+  const d = moment(Date.now())
+  return d.tz(zone).format('YYYY-M-D')
+
 };
 
-const getCurrentDayForUser = user => {
-  const offset = user.slack.tz_offset / (60 * 60);
-  return getOffsetDay(offset);
+const getCurrentDayForUser = (robot, user) => {
+  // const offset = user.slack.tz_offset / (60 * 60);
+  zone = getTimezoneFromMap('users', user, robot.brain);
+  const d = moment(Date.now())
+  return d.tz(zone).format('d')
 };
 
-const getCurrentTimeForUser = user => {
-  const offset = user.slack.tz_offset / (60 * 60);
-  return getOffsetHour(offset);
+const getCurrentTimeForUser = (robot, user) => {
+  zone = getTimezoneFromMap('users', user, robot.brain);
+  // const offset = user.slack.tz_offset / (60 * 60);
+  const d = moment(Date.now())
+  return d.tz(zone).format('H');
+  // return getOffsetHour(offset);
 };
 
 const dateIsInRange = (dateStr, rangeStr) => {
@@ -46,8 +59,8 @@ const dateIsOlderThan = (dateOrRangeStr, refDate) => {
   return new Date(date) <= new Date(refDate);
 };
 
-const parseNaturalDate = (expr, user) => {
-  const referenceDate = new Date(`${getCurrentDateForUser(user)} 11:00Z`);
+const parseNaturalDate = (expr, user, robot) => {
+  const referenceDate = new Date(`${getCurrentDateForUser(robot, user)} 11:00Z`);
   const parsed = chrono.parse(expr, referenceDate, { forwardDate: true });
   const { start } = parsed[0];
   const end = parsed.length === 2
