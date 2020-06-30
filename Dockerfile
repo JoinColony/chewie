@@ -6,7 +6,7 @@ RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyri
 RUN apt-get update && apt-get install -y google-cloud-sdk kubectl
 COPY . /app/
 
-RUN yarn || \
+RUN yarn --ignore-engines || \
   ((if [ -f yarn-error.log ]; then \
       cat yarn-error.log; \
     fi) && false)
