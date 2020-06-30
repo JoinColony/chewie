@@ -27,13 +27,17 @@ const {
   parseNaturalDate,
 } = require('./utils/dates');
 
-const { isChannel, isPrivateSlackMessage } = require('./utils/channels');
+const { isChannel, isPrivateDiscordMessage } = require('./utils/channels');
 
 const getBrain = require('./utils/brain');
 
-const BRAIN_PREFIX = 'standup';
+const getTimezoneFromMap = getBrain('timezones').getFromMap
+
+const BRAIN_PREFIX = 'standup-discord';
 // This is the daily-standup channel. This should be an env variable at some point
-const HUBOT_STANDUP_CHANNEL = 'C0NFZA7T5';
+// #Skunkworks
+// const HUBOT_STANDUP_CHANNEL = '720952130562687016';
+const HUBOT_STANDUP_CHANNEL = '718537795068625036';
 // #standup-testing channel
 // const HUBOT_STANDUP_CHANNEL = 'CBX6J6MAA'
 
@@ -198,21 +202,15 @@ const checkStandupsDone = robot => {
     if (usersToShame.length === 1) {
       robot.messageRoom(
         HUBOT_STANDUP_CHANNEL,
-        `Only @${getUserName(
-          usersToShame[0],
-          brain
-        )} forgot to do their standup yesterday. ${randomPhrase}`
+        `Only <@${usersToShame[0].id}> forgot to do their standup yesterday. ${randomPhrase}`
       )
     } else {
       const displayUsers = usersToShame.slice()
       const lastUser = displayUsers.pop()
       robot.messageRoom(
         HUBOT_STANDUP_CHANNEL,
-        displayUsers.map(user => `@${getUserName(user, brain)}`).join(', ') +
-          ` and @${getUserName(
-            lastUser,
-            brain
-          )} did not do their standups yesterday. ${randomPhrase}`
+        displayUsers.map(user => `<@${user.id}>`).join(', ') +
+          ` and <@${lastUser.id}> did not do their standups yesterday. ${randomPhrase}`
       )
     }
   }
@@ -253,7 +251,7 @@ const checkStandupsDone = robot => {
       updateMap('standuppers', user.id, user, brain)
     })
 
-  if (day == 1) {
+  if (day == 0) {
     // On mondays, update and announce the official leaderboard
     // Doing this check here rather than in its own weekly cronjob to avoid race conditions
     const leaderboard = getLeaderboard(true, brain)
@@ -307,14 +305,14 @@ module.exports = robot => {
 
   const listenAddPhrase = (kind, res) => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    if (!isPrivateDiscordMessage(robot.client, res) || !isAdmin(user, brain)) return
     addToMap(`${kind}s`, null, res.match[1], brain)
     res.send(`OK, I've added this ${kind}`)
   }
 
   const listenListPhrases = (kind, res) => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    if (!isPrivateDiscordMessage(robot.client, res) || !isAdmin(user, brain)) return
     const map = getMap(`${kind}s`, brain)
     const phrases = Object.entries(map).map(
       ([key, phrase]) => `${key} - "${phrase}"`
@@ -331,16 +329,17 @@ module.exports = robot => {
 
   const listenRemovePhrase = (kind, res) => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    if (!isPrivateDiscordMessage(robot.client, res) || !isAdmin(user, brain)) return
     removeFromMap(`${kind}s`, res.match[1], brain)
     res.send(`OK, I removed the ${kind} with id ${res.match[1]}`)
   }
 
   robot.hear(/standup add ([0-6])-([0-6])/, async res => {
     const { message, match } = res
-    if (!isPrivateSlackMessage(res)) return
-    if (message.user.slack.tz_offset == null) {
-      return res.send('Please set your time zone in slack first')
+    if (!isPrivateDiscordMessage(robot.client, res)) return
+    const zone = getTimezoneFromMap('users', message.user.id, robot.brain);
+    if (zone == null) {
+      return res.send('Please set your time zone via a PM to me using the `!timezone set <Timezone>` command first')
     }
     const user = {
       id: message.user.id,
@@ -363,7 +362,7 @@ module.exports = robot => {
 
   robot.hear(/standup admin add (.+)/, res => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res)) return
+    if (!isPrivateDiscordMessage(robot.client, res)) return
     if (!noAdmins(brain) && !isAdmin(user, brain)) return
     const userToAdd =
       res.match[1] === 'me' ? user : getUser(res.match[1], brain)
@@ -379,8 +378,8 @@ module.exports = robot => {
 
   robot.hear('standup admin standup list', res => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
-    const date = getCurrentDateForUser(res.message.user)
+    if (!isPrivateDiscordMessage(robot.client, res) || !isAdmin(user, brain)) return
+    const date = getCurrentDateForUser(robot.client, res.message.user)
     const standups = getMap(date, brain)
     const users = getMap('standuppers', brain)
     const mapKeyToUser = key =>
@@ -393,7 +392,7 @@ module.exports = robot => {
 
   robot.hear('standup admin user list', res => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    if (!isPrivateDiscordMessage(robot.client, res) || !isAdmin(user, brain)) return
     const msg = `Standuppers:\n${getUserList(
       'standuppers',
       brain
@@ -403,7 +402,7 @@ module.exports = robot => {
 
   robot.hear(/standup admin user remove (.+)/, res => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    if (!isPrivateDiscordMessage(robot.client, res) || !isAdmin(user, brain)) return
     const userId = res.match[1]
     removeFromMap('standuppers', userId, brain)
     removeMap(`excuses-${userId}`, brain)
@@ -438,30 +437,31 @@ module.exports = robot => {
   )
 
   // At least 3 bold lines with another line following that
-  robot.hear(/(\*.+?\*.*(\r\n|\r|\n)(.*(\r\n|\r|\n))*?){3,}/, res => {
+  robot.hear(/(\*\*.+?\*\*.*(\r\n|\r|\n)(.*(\r\n|\r|\n))*?){3,}/, async (res) => {
     const { user } = res.message
     if (!isChannel(res, HUBOT_STANDUP_CHANNEL) || !isStandupper(user, brain)) {
       return
     }
-    const date = getCurrentDateForUser(user)
-    const hour = getCurrentTimeForUser(user)
-    const day = getCurrentDayForUser(user)
+    const date = getCurrentDateForUser(robot, user.id)
+    const hour = getCurrentTimeForUser(robot, user.id)
+    const day = getCurrentDayForUser(robot, user.id)
     const standupper = getFromMap('standuppers', user.id, brain)
 
     if (hour >= 12 && userHasToWorkToday(standupper, day)) {
-      const username = getUserName(user, brain)
       res.send(
-        `It is a bit late to post your standup, @${username}, please try to do it before noon your time.`
+        `It is a bit late to post your standup, <@${user.id}>, please try to do it before noon your time.`
       )
     }
 
     addToMap(date, res.message.user.id, hour, brain)
-    robot.emit('slack.reaction', { message: res.message, name: 'chewie' })
+    const channel = robot.client.channels.find(x => x.id == res.message.room)
+    const message = await channel.fetchMessage(res.message.id)
+    message.react(":chewie:719957751316611172")
   })
 
   robot.hear(/[sS]tandup excuse add (.+)/, res => {
     const { user } = res.message
-    if (isPrivateSlackMessage(res)) {
+    if (isPrivateDiscordMessage(robot.client, res)) {
       return res.send(
         'An excuse has to be publicly requested in the standup channel'
       )
@@ -469,21 +469,21 @@ module.exports = robot => {
     if (!isChannel(res, HUBOT_STANDUP_CHANNEL) || !isStandupper(user, brain)) {
       return
     }
-    const excuseDateStr = parseNaturalDate(res.match[1], user)
+    const excuseDateStr = parseNaturalDate(res.match[1], user.id, robot)
     addToMap(`excuses-${user.id}`, excuseDateStr, true, brain)
     res.send(`OK, you will be excused at ${excuseDateStr}`)
   })
 
   robot.hear(/standup excuse remove ([\d\->]+)/, res => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isStandupper(user, brain)) return
+    if (!isPrivateDiscordMessage(robot.client, res) || !isStandupper(user, brain)) return
     removeFromMap(`excuses-${user.id}`, res.match[1], brain)
     res.send(`OK, I removed this excuse: ${res.match[1]}`)
   })
 
   robot.hear('standup excuse list', res => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isStandupper(user, brain)) return
+    if (!isPrivateDiscordMessage(robot.client, res) || !isStandupper(user, brain)) return
     const map = getMap(`excuses-${user.id}`, brain)
     const excuses = Object.keys(map).map(excuse => `• ${excuse}`)
     if (!excuses.length) {
@@ -497,22 +497,22 @@ module.exports = robot => {
   })
 
   // These lines are for debugging. Please leave in and commented for now
-  // robot.hear('blame', res => {
-  //   if (!isPrivateSlackMessage(res)) return
-  //   checkStandupsDone(robot)
-  //   cleanUpExcuses(robot)
-  // })
+  robot.hear('blame', res => {
+    if (!isPrivateDiscordMessage(robot.client, res)) return
+    checkStandupsDone(robot)
+    cleanUpExcuses(robot)
+  })
 
   robot.hear('standup leaderboard', res => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isStandupper(user, brain)) return
+    if (!isPrivateDiscordMessage(robot.client, res) || !isStandupper(user, brain)) return
     const output = getLeaderboard(false, brain)
     res.send(output)
   })
 
   robot.hear(/standup admin leaderboard reset (.+)/, res => {
     const { user } = res.message
-    if (!isPrivateSlackMessage(res) || !isAdmin(user, brain)) return
+    if (!isPrivateDiscordMessage(robot.client, res) || !isAdmin(user, brain)) return
     const standuppers = Object.values(getMap('standuppers', brain))
     standuppers
       .filter(user => getUserName(user, brain) == res.match[1])
@@ -520,5 +520,6 @@ module.exports = robot => {
         user.currentCount = 0
         updateMap('standuppers', user.id, user, brain)
       })
+    res.send("It's like they never did a standup (or more accurately, it's like they missed yesterday).");
   })
 }
