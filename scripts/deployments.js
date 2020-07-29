@@ -303,6 +303,15 @@ module.exports = async function(robot) {
     msg.send(`Found staging as: ${stagingColour} and production as ${productionColour}`)
   })
 
+  robot.hear(/!deploy down staging/, async msg => {
+    if (!isDeployer(msg.message.user.id)) return;
+    const {stagingColour} = await getColours();
+    msg.send(`Will take down staging, identified as ${stagingColour}`)
+
+    const res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} ./colony-deployment-scripts/downStaging.sh`)
+    await output(msg, res);
+  })
+
   const toStagingRegex = /^!deploy staging$/
   robot.hear(toStagingRegex, async msg => {
     const { brain } = robot;
