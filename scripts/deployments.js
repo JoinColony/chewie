@@ -257,7 +257,8 @@ module.exports = async function(robot) {
   const toQARegex = /^!deploy qa (backend|frontend) ([0-9a-fA-f]*)( dev)?$/
   robot.hear(toQARegex, async msg => {
     const { brain } = robot;
-
+    res = await exec(`AUTO=true ./colony-deployment-scripts/cleanupGcloud.sh`)
+    
     const matches = toQARegex.exec(msg.message.text);
     // Check they have permission
     if (!canDeploy(msg.message.user.id, 'qa', brain)) {
