@@ -1,6 +1,6 @@
 const isPrivateSlackMessage = res => res.message.room.startsWith('D');
 const isPrivateDiscordMessage = (client, res) => {
-  console.log(JSON.stringify(res));
+  console.log(res);
 	// Get user
 	const user = client.users.get(res.message.user.id);
 	// Get their DM channel with the bot
