@@ -254,13 +254,45 @@ module.exports = async function(robot) {
     }
   }
 
-  const toQARegex = /^!deploy qa (backend|frontend) ([0-9a-fA-f]*)( dev)?$/
+  const resetXdaiRegex = /^!deploy reset xdai fork?$/
+  robot.hear(resetXdaiRegex, async msg => {
+    const { brain } = robot;
+    let res;
+    const networkId = matches[1];
+    const location = matches[2];
+    const commit = matches[3];
+    const dev = matches[4] ? true : false;
+
+    res = await exec(`AUTO=true ./colony-deployment-scripts/cleanupGcloud.sh`)
+
+    const matches = toQARegex.exec(msg.message.text);
+    // Check they have permission
+    if (!canDeploy(msg.message.user.id, 'qa', brain)) {
+      return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
+    }
+    msg.send("Resetting XDai fork")
+    // Get colours
+    const {stagingColour, productionColour} = await getColours();
+
+    try {
+      res = await exec(`AUTO=true PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/resetXdaiFork.sh`)
+    } catch (err) {
+      res = err;
+    }
+    await output(msg, res);
+  });
+
+  const toQARegex = /^!deploy qa network ([0-9]*) (backend|frontend) ([0-9a-fA-f]*)( dev)?$/
   robot.hear(toQARegex, async msg => {
     const { brain } = robot;
     let res;
+    const networkId = matches[1];
+    const location = matches[2];
+    const commit = matches[3];
+    const dev = matches[4] ? true : false;
 
     res = await exec(`AUTO=true ./colony-deployment-scripts/cleanupGcloud.sh`)
-    
+
     const matches = toQARegex.exec(msg.message.text);
     // Check they have permission
     if (!canDeploy(msg.message.user.id, 'qa', brain)) {
@@ -268,14 +300,14 @@ module.exports = async function(robot) {
     }
     msg.send("Deploying to QA")
     try {
-      if (matches[1] === 'frontend') {
-        let imageName = `eu.gcr.io/fluent-aileron-128715/app-frontend:${matches[2]}`
-        if (matches[3]) {
+      if (location === 'frontend') {
+        let imageName = `eu.gcr.io/fluent-aileron-128715/app-frontend:${commit}`
+        if (dev) {
           imageName += "-dev"
         }
-        res = await exec(`AUTO=true FRONTEND_IMAGE_NAME=${imageName} ./colony-deployment-scripts/toQA.sh`)
-      } else if (matches[1] === 'backend' ) {
-        res = await exec(`AUTO=true APP_IMAGE_NAME=eu.gcr.io/fluent-aileron-128715/app-backend:${matches[2]} ./colony-deployment-scripts/toQA.sh`)
+        res = await exec(`AUTO=true NETWORK_ID=${networkId} FRONTEND_IMAGE_NAME=${imageName} ./colony-deployment-scripts/toQA.sh`)
+      } else if (matches[2] === 'backend' ) {
+        res = await exec(`AUTO=true NETWORK_ID=${networkId} APP_IMAGE_NAME=eu.gcr.io/fluent-aileron-128715/app-backend:${commit} ./colony-deployment-scripts/toQA.sh`)
       }
     } catch (err) {
       res = err;
@@ -314,9 +346,11 @@ module.exports = async function(robot) {
     await output(msg, res);
   })
 
-  const toStagingRegex = /^!deploy staging$/
+  const toStagingRegex = /^!deploy staging from ([0-9]*) to ([0-9]*)$/
   robot.hear(toStagingRegex, async msg => {
     const { brain } = robot;
+    const fromNetworkId = matches[1];
+    const toNetworkId = matches[2];
 
     // check they have staging permission
     if (!canDeploy(msg.message.user.id, 'staging', brain)) {
@@ -327,16 +361,17 @@ module.exports = async function(robot) {
     msg.send(`Will deploy to staging, identified as ${stagingColour}`)
     let res;
     try {
-      res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/toStaging.sh`)
+      res = await exec(`AUTO=true FROM_NETWORK_ID=${fromNetworkId} TO_NETWORK_ID=${toNetworkId} STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/toStaging.sh`)
     } catch (err){
       res = err;
     }
     await output(msg, res);
   })
 
-  const toProductionRegex = /^!deploy production$/
+  const toProductionRegex = /^!deploy production network ([0-9]*)$/
   robot.hear(toProductionRegex, async msg => {
     const { brain } = robot;
+    const networkId = matches[1];
 
     // check they have staging permission
     if (!canDeploy(msg.message.user.id, 'production', brain)) {
@@ -348,7 +383,7 @@ module.exports = async function(robot) {
     msg.send(`Will deploy to production. Current production is ${productionColour}. This will become staging, and staging (currently ${stagingColour}) will become production. Be sure to change the topic in #devops if successful.`)
     let res;
     try {
-      res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/stagingToProduction.sh`)
+      res = await exec(`AUTO=true NETWORK_ID=${networkId} STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/stagingToProduction.sh`)
     } catch (err){
       res = err;
     }
