@@ -325,7 +325,7 @@ module.exports = async function(robot) {
     const location = matches[1];
 
     // Check they have permission
-    if (!canDeploy(msg.message.user.id, 'production', brain)) {
+    if (!canDeploy(msg.message.user.id, location, brain)) {
       return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
     }
     msg.send(`Deploying to ${location}`);
