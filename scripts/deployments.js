@@ -260,7 +260,7 @@ module.exports = async function(robot) {
     let res;
     res = await exec(`AUTO=true ./colony-deployment-scripts/cleanupGcloud.sh`)
 
-    const matches = toQARegex.exec(msg.message.text);
+    const matches = resetXdaiRegex.exec(msg.message.text);
     const networkId = matches[1];
     const location = matches[2];
     const commit = matches[3];
@@ -316,12 +316,12 @@ module.exports = async function(robot) {
     await output(msg, res);
   });
 
-  const websiteDeployment = /^!deploy website (staging|production)$/
-  robot.hear(websiteDeployment, async msg => {
+  const websiteDeploymentRegex = /^!deploy website (staging|production)$/
+  robot.hear(websiteDeploymentRegex, async msg => {
     const { brain } = robot;
     let res;
 
-    const matches = toQARegex.exec(msg.message.text);
+    const matches = websiteDeploymentRegex.exec(msg.message.text);
     const location = matches[1];
 
     // Check they have permission
