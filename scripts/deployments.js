@@ -258,14 +258,14 @@ module.exports = async function(robot) {
   robot.hear(resetXdaiRegex, async msg => {
     const { brain } = robot;
     let res;
+    res = await exec(`AUTO=true ./colony-deployment-scripts/cleanupGcloud.sh`)
+
+    const matches = toQARegex.exec(msg.message.text);
     const networkId = matches[1];
     const location = matches[2];
     const commit = matches[3];
     const dev = matches[4] ? true : false;
 
-    res = await exec(`AUTO=true ./colony-deployment-scripts/cleanupGcloud.sh`)
-
-    const matches = toQARegex.exec(msg.message.text);
     // Check they have permission
     if (!canDeploy(msg.message.user.id, 'qa', brain)) {
       return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
@@ -286,14 +286,15 @@ module.exports = async function(robot) {
   robot.hear(toQARegex, async msg => {
     const { brain } = robot;
     let res;
+    res = await exec(`AUTO=true ./colony-deployment-scripts/cleanupGcloud.sh`)
+
+    const matches = toQARegex.exec(msg.message.text);
+
     const networkId = matches[1];
     const location = matches[2];
     const commit = matches[3];
     const dev = matches[4] ? true : false;
 
-    res = await exec(`AUTO=true ./colony-deployment-scripts/cleanupGcloud.sh`)
-
-    const matches = toQARegex.exec(msg.message.text);
     // Check they have permission
     if (!canDeploy(msg.message.user.id, 'qa', brain)) {
       return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
@@ -308,6 +309,32 @@ module.exports = async function(robot) {
         res = await exec(`AUTO=true NETWORK_ID=${networkId} FRONTEND_IMAGE_NAME=${imageName} ./colony-deployment-scripts/toQA.sh`)
       } else if (matches[2] === 'backend' ) {
         res = await exec(`AUTO=true NETWORK_ID=${networkId} APP_IMAGE_NAME=eu.gcr.io/fluent-aileron-128715/app-backend:${commit} ./colony-deployment-scripts/toQA.sh`)
+      }
+    } catch (err) {
+      res = err;
+    }
+    await output(msg, res);
+  });
+
+  const websiteDeployment = /^!deploy website (staging|production)$/
+  robot.hear(websiteDeployment, async msg => {
+    const { brain } = robot;
+    let res;
+
+    const matches = toQARegex.exec(msg.message.text);
+    const location = matches[1];
+
+    // Check they have permission
+    if (!canDeploy(msg.message.user.id, 'production', brain)) {
+      return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
+    }
+    msg.send(`Deploying to ${location}`);
+    const {stagingColour, productionColour} = await getColours();
+    try {
+      if (location === 'staging') {
+        res = await exec(`AUTO=true COLOUR=${stagingColour} ./colony-deployment-scripts/deployWebsite.sh`)
+      } else if (location === 'production' ) {
+        res = await exec(`AUTO=true COLOUR=${productionColour} ./colony-deployment-scripts/deployWebsite.sh`)
       }
     } catch (err) {
       res = err;
