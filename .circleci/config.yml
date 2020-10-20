@@ -8,6 +8,9 @@ jobs:
   build:
     docker:
       - image: google/cloud-sdk
+        auth: 
+          username: colonyci
+          password: $COLONYCI_DOCKERHUB_PASSWORD
     steps:
       - checkout
       - setup_remote_docker
@@ -35,6 +38,7 @@ workflows:
   deploy:
     jobs:
       - build:
+          context: dockerhub-credentials
           filters:
             branches:
               only: master
