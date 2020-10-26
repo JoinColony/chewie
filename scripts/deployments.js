@@ -258,7 +258,6 @@ module.exports = async function(robot) {
   robot.hear(resetXdaiRegex, async msg => {
     const { brain } = robot;
     let res;
-    res = await exec(`AUTO=true ./colony-deployment-scripts/cleanupGcloud.sh`)
 
     const matches = resetXdaiRegex.exec(msg.message.text);
     const networkId = matches[1];
@@ -286,7 +285,6 @@ module.exports = async function(robot) {
   robot.hear(toQARegex, async msg => {
     const { brain } = robot;
     let res;
-    res = await exec(`AUTO=true ./colony-deployment-scripts/cleanupGcloud.sh`)
 
     const matches = toQARegex.exec(msg.message.text);
 
