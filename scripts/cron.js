@@ -1,6 +1,6 @@
 var cron = require('node-cron');
 
-cron.schedule('* * 11 * *', () => {
+cron.schedule('* * 11 * *', async () => {
   let res;
   console.log('Cleaning up GCloud images');
   try {
