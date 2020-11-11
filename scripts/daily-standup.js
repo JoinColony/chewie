@@ -131,7 +131,7 @@ const getLeaderboard = (rerank, brain) => {
     (a, b) => b.currentCount - a.currentCount
   )
   let rank = 1
-  let output = '*Number of standups since each person last missed one*\n'
+  let output = '**Number of standups since each person last missed one**\n'
   let rankScore = standuppers[0].currentCount
   let nProcessed = 0
   standuppers.forEach(user => {
@@ -282,8 +282,7 @@ const setupCronJob = robot => {
 
   const leaderboardJob = new CronJob({
     // Every monday at 23:46h
-    // cronTime: '00 46 23 * * 1',
-    cronTime: '00 10 04 * * *',
+    cronTime: '0 46 23 * * 1',
     onTick: () => {
       const leaderboard = getLeaderboard(true, robot.brain)
       robot.messageRoom(HUBOT_STANDUP_CHANNEL, leaderboard)
