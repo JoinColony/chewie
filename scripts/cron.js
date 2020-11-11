@@ -3,7 +3,7 @@ const exec = require('await-exec')
 
 module.exports = robot => {
   const gcloudCleanupJob = new CronJob({
-  cronTime: '00 15 22 * * *',
+  cronTime: '00 34 15 * * *',
     onTick: async () => {
       let res;
       console.log('Cleaning up GCloud images');
