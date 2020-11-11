@@ -2,7 +2,7 @@ const CronJob = require('cron').CronJob
 const exec = require('await-exec')
 
 const gcloudCleanupJob = new CronJob({
-cronTime: '00 11 00 * * *',
+cronTime: '00 15 10 * * *',
   onTick: async () => {
     let res;
     console.log('Cleaning up GCloud images');

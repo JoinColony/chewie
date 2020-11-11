@@ -283,7 +283,7 @@ const setupCronJob = robot => {
   const leaderboardJob = new CronJob({
     // Every monday at 23:46h
     // cronTime: '00 46 23 * * 1',
-    cronTime: '00 00 04 * * *',
+    cronTime: '00 10 04 * * *',
     onTick: () => {
       const leaderboard = getLeaderboard(true, robot.brain)
       robot.messageRoom(HUBOT_STANDUP_CHANNEL, leaderboard)
