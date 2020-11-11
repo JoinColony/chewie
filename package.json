@@ -32,7 +32,6 @@
     "hubot-slack": "^4.5.3",
     "hubot-slack-reaction": "^0.0.4",
     "moment-timezone": "^0.5.31",
-    "node-cron": "^2.0.3",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",
     "spacetime-informal": "^0.3.0"

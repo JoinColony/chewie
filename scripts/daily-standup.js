@@ -250,13 +250,6 @@ const checkStandupsDone = robot => {
       }
       updateMap('standuppers', user.id, user, brain)
     })
-
-  if (day == 0) {
-    // On mondays, update and announce the official leaderboard
-    // Doing this check here rather than in its own weekly cronjob to avoid race conditions
-    const leaderboard = getLeaderboard(true, brain)
-    robot.messageRoom(HUBOT_STANDUP_CHANNEL, leaderboard)
-  }
 }
 
 const cleanUpExcuses = robot => {
@@ -286,6 +279,20 @@ const setupCronJob = robot => {
     timeZone: 'Pacific/Niue'
   })
   job.start()
+
+  const leaderboardJob = new CronJob({
+    // Every monday at 23:46h
+    // cronTime: '00 46 23 * * 1',
+    cronTime: '00 00 04 * * *',
+    onTick: () => {
+      const leaderboard = getLeaderboard(true, robot.brain)
+      robot.messageRoom(HUBOT_STANDUP_CHANNEL, leaderboard)
+    },
+    start: false,
+    // Last time zone of the day (UTC-11)
+    timeZone: 'Pacific/Niue'
+  })
+  leaderboardJob.start()
 }
 
 module.exports = robot => {
