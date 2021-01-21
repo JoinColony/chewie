@@ -339,6 +339,8 @@ module.exports = async function(robot) {
           msg.send("I don't know how to deploy the graph for that network. Someone needs to teach this old wookie some new tricks!")
         }
       }
+    } catch (err) {
+      msg.send("Error trying to deploy the graph:" + console.log(err))
     }
   });
 
