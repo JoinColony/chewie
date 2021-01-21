@@ -334,7 +334,7 @@ module.exports = async function(robot) {
               "User-Agent": "JoinColony/chewie",
             }
           });
-          msg.send("Keep an eye on the deployment of the graph here: https://github.com/joinColony/subgraph/actions and the graph itself (which will require time to sync after deployment) here: https://thegraph.com/explorer/subgraph/joincolony/colony-goerli")
+          msg.send("Keep an eye on the deployment of the graph here: <https://github.com/joinColony/subgraph/actions> and the status of the graph itself (which will require time to sync after deployment) here: <https://thegraph.com/explorer/subgraph/joincolony/colony-goerli>")
         } else {
           msg.send("I don't know how to deploy the graph for that network. Someone needs to teach this old wookie some new tricks!")
         }
