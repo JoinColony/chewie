@@ -312,6 +312,34 @@ module.exports = async function(robot) {
       res = err;
     }
     await output(msg, res);
+
+    // Do the graph
+    try {
+      if (location === 'frontend') {
+        if (networkId === "5"){
+          const formData = {
+            'event_type': `trigger-deploy-goerli`,
+            'client_payload':{
+              FRONTEND_COMMIT: commit
+            }
+          }
+          await request({
+            method: 'POST',
+            uri: `https://api.github.com/repos/joinColony/subgraph/dispatches`,
+            keepAlive: false,
+            body: JSON.stringify(formData),
+            headers:{
+              "Accept": "application/vnd.github.everest-preview+json",
+              "Authorization": `token ${process.env.HUBOT_GITHUB_TOKEN}`,
+              "User-Agent": "JoinColony/chewie",
+            }
+          });
+          msg.send("Keep an eye on the deployment of the graph here: https://github.com/joinColony/subgraph/actions and the graph itself (which will require time to sync after deployment) here: https://thegraph.com/explorer/subgraph/joincolony/colony-goerli")
+        } else {
+          msg.send("I don't know how to deploy the graph for that network. Someone needs to teach this old wookie some new tricks!")
+        }
+      }
+    }
   });
 
   const websiteDeploymentRegex = /^!deploy website (staging|production)$/
