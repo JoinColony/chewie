@@ -476,10 +476,12 @@ module.exports = async function(robot) {
           await output(msg, r.value);
         } else {
           await output(msg, r.reason);
+          console.log('single promise failed')
           anyFailure = true;
         }
       }
     } catch (err){
+      console.log('bigger error');
       anyFailure = true;
       await output(msg, err);
     }
@@ -495,4 +497,18 @@ module.exports = async function(robot) {
       await output(msg, res);
     }
   })
+
+  const toProductionRegex = /^!switchStagingProduction$/
+  robot.hear(toProductionRegex, async msg => {
+    const {stagingColour, productionColour} = await getColours();
+    msg.send(`Will switch staging and production. Current production is ${productionColour}. This will become staging, and staging (currently ${stagingColour}) will become production. Be sure to change the topic in #devops if successful.`)
+
+    try {
+      res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/switchStagingProduction.sh`)
+    } catch (err) {
+      res = err;
+    }
+    await output(msg, res);
+
+  }
 }
