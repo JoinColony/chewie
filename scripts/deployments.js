@@ -424,7 +424,29 @@ module.exports = async function(robot) {
     await output(msg, res);
   })
 
-  const toProductionRegex = /^!deploy production network ([0-9]*)$/
+//   const toProductionRegex = /^!deploy production network ([0-9]*)$/
+//   robot.hear(toProductionRegex, async msg => {
+//     const { brain } = robot;
+//     const networkId = matches[1];
+//
+//     // check they have staging permission
+//     if (!canDeploy(msg.message.user.id, 'production', brain)) {
+//       return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
+//     }
+//
+//     // Get colours
+//     const {stagingColour, productionColour} = await getColours();
+//     msg.send(`Will deploy to production. Current production is ${productionColour}. This will become staging, and staging (currently ${stagingColour}) will become production. Be sure to change the topic in #devops if successful.`)
+//     let res;
+//     try {
+//       res = await exec(`AUTO=true NETWORK_ID=${networkId} STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/stagingToProduction.sh`)
+//     } catch (err){
+//       res = err;
+//     }
+//     await output(msg, res);
+//   })
+
+  const toProductionRegex = /^!deploy production$/
   robot.hear(toProductionRegex, async msg => {
     const { brain } = robot;
     const matches = toProductionRegex.exec(msg.message.text);
@@ -441,11 +463,34 @@ module.exports = async function(robot) {
     msg.send(`Will deploy to production. Current production is ${productionColour}. This will become staging, and staging (currently ${stagingColour}) will become production. Be sure to change the topic in #devops if successful.`)
     let res;
     try {
-      res = await exec(`AUTO=true NETWORK_ID=${networkId} STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/stagingToProduction.sh`)
+      res = Promise.allSettled([
+        exec(`AUTO=true NETWORK_ID=100 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkStagingToProduction.sh`),
+        exec(`AUTO=true NETWORK_ID=1 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkStagingToProduction.sh`)
+      ]
+      let anyFailure = false;
+      for (i in res){
+        let r = res[i];
+        if (r.status === 'fulfilled'){
+          await output(msg, r.value);
+        } else {
+          await output(msg, r.reason);
+          anyFailure = true;
+        }
+      }
     } catch (err){
-      res = err;
+      await output(msg, err);
     }
-    await output(msg, res);
+    if (!anyFailure){
+      // If nothing failed...
+      // Switch staging and production
+      await msg.send("No failures detected, switching staging and production");
+      try {
+        res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/switchStagingProduction.sh`)
+      } catch (err) {
+        res = err;
+      }
+      await output(msg, res);
+    }
   })
 
 }
