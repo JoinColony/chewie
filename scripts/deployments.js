@@ -466,7 +466,7 @@ module.exports = async function(robot) {
     let res;
     let anyFailure = false;
     try {
-      res = Promise.allSettled([
+      res = await Promise.allSettled([
         exec(`AUTO=true NETWORK_ID=100 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkStagingToProduction.sh`),
         exec(`AUTO=true NETWORK_ID=1 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkStagingToProduction.sh`)
       ])
