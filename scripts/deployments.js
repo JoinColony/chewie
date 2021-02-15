@@ -404,6 +404,7 @@ module.exports = async function(robot) {
   const toStagingRegex = /^!deploy staging from ([0-9]*) to ([0-9]*)$/
   robot.hear(toStagingRegex, async msg => {
     const { brain } = robot;
+    const matches = toStagingRegex.exec(msg.message.text);
     const fromNetworkId = matches[1];
     const toNetworkId = matches[2];
 
@@ -426,6 +427,8 @@ module.exports = async function(robot) {
   const toProductionRegex = /^!deploy production network ([0-9]*)$/
   robot.hear(toProductionRegex, async msg => {
     const { brain } = robot;
+    const matches = toProductionRegex.exec(msg.message.text);
+
     const networkId = matches[1];
 
     // check they have staging permission
