@@ -480,6 +480,7 @@ module.exports = async function(robot) {
         }
       }
     } catch (err){
+      anyFailure = true;
       await output(msg, err);
     }
     if (!anyFailure){
