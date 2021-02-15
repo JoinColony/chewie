@@ -464,12 +464,12 @@ module.exports = async function(robot) {
     const {stagingColour, productionColour} = await getColours();
     msg.send(`Will deploy to production. Current production is ${productionColour}. This will become staging, and staging (currently ${stagingColour}) will become production. Be sure to change the topic in #devops if successful.`)
     let res;
+    let anyFailure = false;
     try {
       res = Promise.allSettled([
         exec(`AUTO=true NETWORK_ID=100 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkStagingToProduction.sh`),
         exec(`AUTO=true NETWORK_ID=1 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkStagingToProduction.sh`)
       ])
-      let anyFailure = false;
       for (i in res){
         let r = res[i];
         if (r.status === 'fulfilled'){
