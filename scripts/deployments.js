@@ -498,8 +498,8 @@ module.exports = async function(robot) {
     }
   })
 
-  const toProductionRegex = /^!switchStagingProduction$/
-  robot.hear(toProductionRegex, async msg => {
+  const switchRegex = /^!switchStagingProduction$/
+  robot.hear(switchRegex, async msg => {
     const {stagingColour, productionColour} = await getColours();
     msg.send(`Will switch staging and production. Current production is ${productionColour}. This will become staging, and staging (currently ${stagingColour}) will become production. Be sure to change the topic in #devops if successful.`)
 
