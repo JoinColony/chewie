@@ -510,5 +510,5 @@ module.exports = async function(robot) {
     }
     await output(msg, res);
 
-  }
+  })
 }
