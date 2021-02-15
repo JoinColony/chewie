@@ -7,6 +7,8 @@ const { isChannel, isPrivateDiscordMessage } = require('./utils/channels');
 const getBrain = require('./utils/brain');
 
 const BRAIN_PREFIX = 'deployment-discord';
+const allSettled = require('promise.allsettled');
+allSettled.shim()
 
 const {
   addToMap,

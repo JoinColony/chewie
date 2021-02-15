@@ -33,6 +33,7 @@
     "hubot-slack-reaction": "^0.0.4",
     "moment-timezone": "^0.5.31",
     "node-fetch": "^2.6.1",
+    "promise.allsettled": "^1.0.4",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",
     "spacetime-informal": "^0.3.0"
