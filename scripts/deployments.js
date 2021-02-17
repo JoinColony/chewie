@@ -533,6 +533,7 @@ module.exports = async function(robot) {
         exec(`AUTO=true NETWORK_ID=100 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkProductionImagesToStaging.sh`),
         exec(`AUTO=true NETWORK_ID=1 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkProductionImagesToStaging.sh`)
       ])
+      console.log(res)
       for (let i in res){
         let r = res[i];
         console.log(r);
