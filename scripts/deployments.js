@@ -535,6 +535,7 @@ module.exports = async function(robot) {
       ])
       for (let i in res){
         let r = res[i];
+        console.log(r);
         if (r.status === 'fulfilled'){
           await output(msg, r.value);
         } else {
