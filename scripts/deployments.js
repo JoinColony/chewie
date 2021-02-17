@@ -451,9 +451,6 @@ module.exports = async function(robot) {
   const toProductionRegex = /^!deploy production$/
   robot.hear(toProductionRegex, async msg => {
     const { brain } = robot;
-    const matches = toProductionRegex.exec(msg.message.text);
-
-    const networkId = matches[1];
 
     // check they have staging permission
     if (!canDeploy(msg.message.user.id, 'production', brain)) {
@@ -470,7 +467,7 @@ module.exports = async function(robot) {
         exec(`AUTO=true NETWORK_ID=100 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkStagingToProduction.sh`),
         exec(`AUTO=true NETWORK_ID=1 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkStagingToProduction.sh`)
       ])
-      for (i in res){
+      for (let i in res){
         let r = res[i];
         if (r.status === 'fulfilled'){
           await output(msg, r.value);
@@ -509,7 +506,7 @@ module.exports = async function(robot) {
 
     const {stagingColour, productionColour} = await getColours();
     msg.send(`Will switch staging and production. Current production is ${productionColour}. This will become staging, and staging (currently ${stagingColour}) will become production. Be sure to change the topic in #devops if successful.`)
-
+    let res;
     try {
       res = await exec(`AUTO=true STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/switchStagingProduction.sh`)
     } catch (err) {
@@ -532,23 +529,21 @@ module.exports = async function(robot) {
     msg.send(`Will sync all staging instances (i.e. ${stagingColour} instances) to what is currently on production. Current production is ${productionColour}. `)
 
     try {
-      res = await Promise.allSettled([
+      let res = await Promise.allSettled([
         exec(`AUTO=true NETWORK_ID=100 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkProductionImagesToStaging.sh`),
         exec(`AUTO=true NETWORK_ID=1 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkProductionImagesToStaging.sh`)
       ])
-      for (i in res){
+      for (let i in res){
         let r = res[i];
         if (r.status === 'fulfilled'){
           await output(msg, r.value);
         } else {
           await output(msg, r.reason);
           console.log('single promise failed')
-          anyFailure = true;
         }
       }
     } catch (err){
       console.log('bigger error');
-      anyFailure = true;
       await output(msg, err);
     }
   })
