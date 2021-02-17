@@ -500,6 +500,12 @@ module.exports = async function(robot) {
 
   const switchRegex = /^!switchStagingProduction$/
   robot.hear(switchRegex, async msg => {
+
+    // check they have deployment permission
+    if (!canDeploy(msg.message.user.id, 'production', brain)) {
+      return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
+    }
+
     const {stagingColour, productionColour} = await getColours();
     msg.send(`Will switch staging and production. Current production is ${productionColour}. This will become staging, and staging (currently ${stagingColour}) will become production. Be sure to change the topic in #devops if successful.`)
 
@@ -511,4 +517,40 @@ module.exports = async function(robot) {
     await output(msg, res);
 
   })
+
+  const syncRegex = /^!deployment sync staging from production$/
+  robot.hear(syncRegex, async msg => {
+
+  // check they have deployment permission
+  if (!canDeploy(msg.message.user.id, 'staging', brain)) {
+    return msg.send("You do not have that permission, as far as I can see? Take it up with the admins...");
+  }
+
+  const {stagingColour, productionColour} = await getColours();
+  msg.send(`Will sync all staging instances (i.e. ${stagingColour} instances) to what is currently on production. Current production is ${productionColour}. `)
+
+  try {
+    res = await Promise.allSettled([
+      exec(`AUTO=true NETWORK_ID=100 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkProductionImagesToStaging.sh`),
+      exec(`AUTO=true NETWORK_ID=1 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkProductionImagesToStaging.sh`)
+    ])
+    for (i in res){
+      let r = res[i];
+      if (r.status === 'fulfilled'){
+        await output(msg, r.value);
+      } else {
+        await output(msg, r.reason);
+        console.log('single promise failed')
+        anyFailure = true;
+      }
+    }
+  } catch (err){
+    console.log('bigger error');
+    anyFailure = true;
+    await output(msg, err);
+  }
+
+})
+
+
 }
