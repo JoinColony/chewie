@@ -378,18 +378,6 @@ module.exports = async function(robot) {
   }
 
   async function getColours(){
-    const devopsTopic = await devopsChannel.topic;
-
-    const stagingColourRegex = /Currently staging: ([a-zA-Z]*)/
-    const stagingColourMatches = stagingColourRegex.exec(devopsTopic);
-    const stagingColour = stagingColourMatches[1].toLowerCase();
-    const productionColourRegex = /Currently production\/live: ([a-zA-Z]*)/
-    const productionColourMatches = productionColourRegex.exec(devopsTopic);
-    const productionColour = productionColourMatches[1].toLowerCase();
-    return {stagingColour, productionColour}
-  }
-
-  async function getColours2(){
     try {
       let res = await exec("kubectl get svc nginx-dev -o yaml | grep colour: | awk '{print $2}' | tr -d '\n'")
       const stagingColour = res.stdout;
@@ -398,28 +386,13 @@ module.exports = async function(robot) {
       return {stagingColour, productionColour}
     } catch (err){
       console.log(`GetColours Error: ${err}`);
+      throw new Error('Unable to get colours for some reason')
     }
   }
 
   robot.hear(/^!deploy colours$/, async msg => {
     const {stagingColour, productionColour} = await getColours();
-    msg.send(`Found staging as: ${stagingColour} and production as ${productionColour}`)
-  })
-
-  robot.hear(/^!deploy colours2$/, async msg => {
-    const {stagingColour, productionColour} = await getColours2();
     msg.send(`Found staging as: ${stagingColour} and production as ${productionColour} by actually looking at pods`)
-  })
-
-  robot.hear(/^!deploy colours equality$/, async msg => {
-    const original = await getColours()
-    const updated = await getColours2()
-    if (original.stagingColour === updated.stagingColour && original.productionColour === updated.productionColour){
-      msg.send(`Colours from both methods are exactly equal`);
-    } else {
-      msg.send(`Colours do not seem to be exactly equal`)
-      console.log(original, updated);
-    }
   })
 
   robot.hear(/!deploy down staging/, async msg => {
