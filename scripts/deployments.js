@@ -389,9 +389,24 @@ module.exports = async function(robot) {
     return {stagingColour, productionColour}
   }
 
+  async function getColours2(){
+    try {
+      const stagingColour = await exec("kubectl get svc nginx-dev -o yaml | grep colour: | awk '{print $2}'")
+      const productionColour = await exec("kubectl get svc nginx -o yaml | grep colour: | awk '{print $2}'")
+      return {stagingColour, productionColour}
+    } catch (err){
+      console.log(`GetColours Error: ${err}`);
+    }
+  }
+
   robot.hear(/!deploy colours/, async msg => {
     const {stagingColour, productionColour} = await getColours();
     msg.send(`Found staging as: ${stagingColour} and production as ${productionColour}`)
+  })
+
+  robot.hear(/!deploy colours2/, async msg => {
+    const {stagingColour, productionColour} = await getColours2();
+    msg.send(`Found staging as: ${stagingColour} and production as ${productionColour} by actually looking at pods`)
   })
 
   robot.hear(/!deploy down staging/, async msg => {
