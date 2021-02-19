@@ -401,14 +401,25 @@ module.exports = async function(robot) {
     }
   }
 
-  robot.hear(/!deploy colours$/, async msg => {
+  robot.hear(/^!deploy colours$/, async msg => {
     const {stagingColour, productionColour} = await getColours();
     msg.send(`Found staging as: ${stagingColour} and production as ${productionColour}`)
   })
 
-  robot.hear(/!deploy colours2$/, async msg => {
+  robot.hear(/^!deploy colours2$/, async msg => {
     const {stagingColour, productionColour} = await getColours2();
     msg.send(`Found staging as: ${stagingColour} and production as ${productionColour} by actually looking at pods`)
+  })
+
+  robot.hear(/^!deploy colours equality$/, async msg => {
+    const original = await getColours()
+    const updated = await getColours2()
+    if (original.stagingColour === updated.stagingColour && original.productionColour === updated.productionColour){
+      msg.send(`Colours from both methods are exactly equal`);
+    } else {
+      msg.send(`Colours do not seem to be exactly equal`)
+      console.log(original, updated);
+    }
   })
 
   robot.hear(/!deploy down staging/, async msg => {
