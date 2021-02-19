@@ -391,10 +391,10 @@ module.exports = async function(robot) {
 
   async function getColours2(){
     try {
-      let res = await exec("kubectl get svc nginx-dev -o yaml | grep colour: | awk '{print $2}'")
-      stagingColour = res.stdout;
-      res = await exec("kubectl get svc nginx -o yaml | grep colour: | awk '{print $2}'")
-      productionColour = res.stdout;
+      let res = await exec("kubectl get svc nginx-dev -o yaml | grep colour: | awk '{print $2}' | tr -d '\n'")
+      const stagingColour = res.stdout;
+      res = await exec("kubectl get svc nginx -o yaml | grep colour: | awk '{print $2}' | tr -d '\n'")
+      const productionColour = res.stdout;
       return {stagingColour, productionColour}
     } catch (err){
       console.log(`GetColours Error: ${err}`);
