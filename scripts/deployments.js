@@ -283,6 +283,26 @@ module.exports = async function(robot) {
     await output(msg, res);
   });
 
+  const triggerGraphDeployment = async function(event_type, commit){
+    const formData = {
+      'event_type': event_type,
+      'client_payload':{
+        FRONTEND_COMMIT: commit
+      }
+    }
+    return request({
+      method: 'POST',
+      uri: `https://api.github.com/repos/joinColony/subgraph/dispatches`,
+      keepAlive: false,
+      body: JSON.stringify(formData),
+      headers:{
+        "Accept": "application/vnd.github.everest-preview+json",
+        "Authorization": `token ${process.env.HUBOT_GITHUB_TOKEN}`,
+        "User-Agent": "JoinColony/chewie",
+      }
+    });
+  }
+
   const toQARegex = /^!deploy qa network ([0-9]*) (backend|frontend) ([0-9a-fA-f]*)( dev)?$/
   robot.hear(toQARegex, async msg => {
     const { brain } = robot;
@@ -319,24 +339,11 @@ module.exports = async function(robot) {
     try {
       if (location === 'frontend') {
         if (networkId === "5"){
-          const formData = {
-            'event_type': `trigger-deploy-goerli`,
-            'client_payload':{
-              FRONTEND_COMMIT: commit
-            }
-          }
-          await request({
-            method: 'POST',
-            uri: `https://api.github.com/repos/joinColony/subgraph/dispatches`,
-            keepAlive: false,
-            body: JSON.stringify(formData),
-            headers:{
-              "Accept": "application/vnd.github.everest-preview+json",
-              "Authorization": `token ${process.env.HUBOT_GITHUB_TOKEN}`,
-              "User-Agent": "JoinColony/chewie",
-            }
-          });
+          await triggerGraphDeployment('trigger-deploy-goerli', commit);
           msg.send("Keep an eye on the deployment of the graph here: <https://github.com/joinColony/subgraph/actions> and the status of the graph itself (which will require time to sync after deployment) here: <https://thegraph.com/explorer/subgraph/joincolony/colony-goerli>")
+        } else if (networkId === "100") {
+          await triggerGraphDeployment('trigger-deploy-xdai-qa', commit)
+          msg.send("Keep an eye on the deployment of the graph here: <https://github.com/joinColony/subgraph/actions> and the status of the graph itself (which will require time to sync after deployment) here: <https://thegraph.com/explorer/subgraph/joincolony/colony-xdai-qa>")
         } else {
           msg.send("I don't know how to deploy the graph for that network. Someone needs to teach this old wookie some new tricks!")
         }
@@ -425,6 +432,19 @@ module.exports = async function(robot) {
       res = err;
     }
     await output(msg, res);
+    // Get the commit being used from the image tag
+    res = await exec(`kubectl get deployment dapp-red-network-$FROM_NETWORK_ID -o yaml | grep image: | awk '{print $2}' | cut -d ":" -f2 | tr -d '\n'`)
+    const commit = res.stdout
+    if (toNetworkId === "5"){
+      await triggerGraphDeployment('trigger-deploy-goerli', commit);
+      msg.send("Keep an eye on the deployment of the graph here: <https://github.com/joinColony/subgraph/actions> and the status of the graph itself (which will require time to sync after deployment) here: <https://thegraph.com/explorer/subgraph/joincolony/colony-goerli>")
+    } else if (toNetworkId === "100") {
+      await triggerGraphDeployment('trigger-deploy-xdai', commit)
+      msg.send("Keep an eye on the deployment of the graph here: <https://github.com/joinColony/subgraph/actions> and the status of the graph itself (which will require time to sync after deployment) here: <https://thegraph.com/explorer/subgraph/joincolony/colony-xdai>")
+
+    } else {
+      msg.send("I don't know how to deploy the graph for that network. Someone needs to teach this old wookie some new tricks!")
+    }
   })
 
 //   const toProductionRegex = /^!deploy production network ([0-9]*)$/
