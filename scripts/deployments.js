@@ -35,7 +35,7 @@ module.exports = async function(robot) {
   await getDeploymentScripts()
 
   // Get the devops channel ID. The topic will be used to determine what colour is staging / production when asked to deploy to either.
-  const devopsChannel = robot.client.channels.find(channel => channel.name === "chewie-skunkworks");
+  const devopsChannel = robot.client.channels.cache.find(channel => channel.name === "chewie-skunkworks");
 
   async function getDeploymentScripts() {
     await exec(`rm -rf ./colony-deployment-scripts`);
@@ -120,8 +120,8 @@ module.exports = async function(robot) {
     // Can't @ users not in a chat with you, so this needs to be in public now
     // if (!isPrivateDiscordMessage(robot.client, res)) return
     if (!noAdmins(brain) && !isAdmin(user, brain)) return
-    const channel = robot.client.channels.find(x => x.id == res.message.room)
-    const message = await channel.fetchMessage(res.message.id)
+    const channel = robot.client.channels.cache.find(x => x.id == res.message.room)
+    const message = await channel.messages.fetch(res.message.id)
     const who = message.mentions.users.first().id;
 
     if (addUserWithRole(who, 'admin', brain)) {
@@ -142,8 +142,8 @@ module.exports = async function(robot) {
     // if (!isPrivateDiscordMessage(robot.client, res)) return
     if (!noAdmins(brain) && !isAdmin(user, brain)) return
 
-    const channel = robot.client.channels.find(x => x.id == res.message.room)
-    const message = await channel.fetchMessage(res.message.id)
+    const channel = robot.client.channels.cache.find(x => x.id == res.message.room)
+    const message = await channel.messages.fetch(res.message.id)
     const who = message.mentions.users.first().id;
 
     if (removeUserWithRole(who, `admin`, brain)) {
@@ -172,8 +172,8 @@ module.exports = async function(robot) {
     const where = res.match[1].toLowerCase();
     if (where !== "qa" && where !== "staging" && where !== "production") { return }
 
-    const channel = robot.client.channels.find(x => x.id == res.message.room)
-    const message = await channel.fetchMessage(res.message.id)
+    const channel = robot.client.channels.cache.find(x => x.id == res.message.room)
+    const message = await channel.messages.fetch(res.message.id)
     const who = message.mentions.users.first().id;
     if (!noAdmins(brain) && !isAdmin(user, brain)) return
 
@@ -193,8 +193,8 @@ module.exports = async function(robot) {
     const { brain } = robot
     const where = res.match[1].toLowerCase();
     if (where !== "qa" && where !== "staging" && where !== "production") { return }
-    const channel = robot.client.channels.find(x => x.id == res.message.room)
-    const message = await channel.fetchMessage(res.message.id)
+    const channel = robot.client.channels.cache.find(x => x.id == res.message.room)
+    const message = await channel.messages.fetch(res.message.id)
     const who = message.mentions.users.first().id;
 
     if (!noAdmins(brain) && !isAdmin(user, brain)) return

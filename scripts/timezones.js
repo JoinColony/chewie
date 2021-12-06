@@ -21,7 +21,7 @@ const {
 module.exports = robot => {
   const { brain, messageRoom } = robot
 
-  robot.hear(/^Chewie: !timezone set (.+)$/, res => {
+  robot.hear(/^!timezone set (.+)$/, res => {
     if (!isPrivateDiscordMessage(robot.client, res) ) return
     // Do they already have it set?
     const zone = getFromMap('users', res.message.user.id, brain);
@@ -34,7 +34,7 @@ module.exports = robot => {
 	res.send(`You have set your timezone to \`${newZone}\`. If I've understood wrong, try again and try being more specific`);
   })
 
-  robot.hear(/^Chewie: !timezone$/, res => {
+  robot.hear(/!timezone$/, res => {
   	console.log(res);
       if (!isPrivateDiscordMessage(robot.client, res) ) return
       console.log('whee')

@@ -171,7 +171,7 @@ const checkStandupsDone = robot => {
   const standuppers = Object.values(getMap('standuppers', brain))
 
   if (nobodyHadToWorkToday(standuppers, day)) {
-    return robot.messageRoom(
+    return robot.messageChannel(
       HUBOT_STANDUP_CHANNEL,
       'Yesterday was a free day for everyone! Hope you enjoyed it 🏝'
     )
@@ -190,7 +190,7 @@ const checkStandupsDone = robot => {
     const praises = Object.values(getMap('praises', brain))
     const randomIdx = Math.floor(Math.random() * praises.length)
     const randomPraise = praises[randomIdx]
-    robot.messageRoom(
+    robot.messageChannel(
       HUBOT_STANDUP_CHANNEL,
       `Everyone did their standups yesterday! ${randomPraise ||
         'That makes me a very happy Wookiee!'}`
@@ -200,14 +200,14 @@ const checkStandupsDone = robot => {
     const randomIdx = Math.floor(Math.random() * phrases.length)
     const randomPhrase = phrases[randomIdx]
     if (usersToShame.length === 1) {
-      robot.messageRoom(
+      robot.messageChannel(
         HUBOT_STANDUP_CHANNEL,
         `Only <@${usersToShame[0].id}> forgot to do their standup yesterday. ${randomPhrase}`
       )
     } else {
       const displayUsers = usersToShame.slice()
       const lastUser = displayUsers.pop()
-      robot.messageRoom(
+      robot.messageChannel(
         HUBOT_STANDUP_CHANNEL,
         displayUsers.map(user => `<@${user.id}>`).join(', ') +
           ` and <@${lastUser.id}> did not do their standups yesterday. ${randomPhrase}`
@@ -285,7 +285,7 @@ const setupCronJob = robot => {
     cronTime: '0 46 23 * * 0',
     onTick: () => {
       const leaderboard = getLeaderboard(true, robot.brain)
-      robot.messageRoom(HUBOT_STANDUP_CHANNEL, leaderboard)
+      robot.messageChannel(HUBOT_STANDUP_CHANNEL, leaderboard)
     },
     start: false,
     // Last time zone of the day (UTC-11)
@@ -295,7 +295,7 @@ const setupCronJob = robot => {
 }
 
 module.exports = robot => {
-  const { brain, messageRoom } = robot
+  const { brain, messageChannel } = robot
   setupCronJob(robot)
 
   // These lines are for debugging. Please leave in and commented for now
@@ -460,8 +460,8 @@ module.exports = robot => {
     }
 
     addToMap(date, res.message.user.id, hour, brain)
-    const channel = robot.client.channels.find(x => x.id == res.message.room)
-    const message = await channel.fetchMessage(res.message.id)
+    const channel = robot.client.channels.cache.find(x => x.id == res.message.room)
+    const message = await channel.messages.fetch(res.message.id)
     message.react(":chewie:719957751316611172")
   })
 
