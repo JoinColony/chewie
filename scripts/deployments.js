@@ -326,9 +326,9 @@ module.exports = async function(robot) {
         if (dev) {
           imageName += "-dev"
         }
-        res = await exec(`AUTO=true NETWORK_ID=${networkId} FRONTEND_IMAGE_NAME=${imageName} ./colony-deployment-scripts/toQA.sh`)
+        res = await exec(`AUTO=true ==${networkId} FRONTEND_IMAGE_NAME=${imageName} ./colony-deployment-scripts/toQA.sh`)
       } else if (matches[2] === 'backend' ) {
-        res = await exec(`AUTO=true NETWORK_ID=${networkId} APP_IMAGE_NAME=eu.gcr.io/fluent-aileron-128715/app-backend:${commit} ./colony-deployment-scripts/toQA.sh`)
+        res = await exec(`AUTO=true  l=${networkId} APP_IMAGE_NAME=eu.gcr.io/fluent-aileron-128715/app-backend:${commit} ./colony-deployment-scripts/toQA.sh`)
       }
     } catch (err) {
       res = err;
@@ -485,8 +485,7 @@ module.exports = async function(robot) {
     let anyFailure = false;
     try {
       res = await Promise.allSettled([
-        exec(`AUTO=true NETWORK_ID=100 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkStagingToProduction.sh`),
-        exec(`AUTO=true NETWORK_ID=1 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkStagingToProduction.sh`)
+        exec(`AUTO=true NETWORK_ID=100 STAGING_COLOUR=${stagingColour} PRODUCTION_COLOUR=${productionColour} ./colony-deployment-scripts/networkStagingToProduction.sh`)
       ])
       for (let i in res){
         let r = res[i];
