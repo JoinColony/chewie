@@ -502,7 +502,8 @@ module.exports = async function(robot) {
       anyFailure = true;
       await output(msg, err);
     }
-    if (!anyFailure){
+    //if (!anyFailure){
+    if (false){
       // If nothing failed...
       // Switch staging and production
       await msg.send("No failures detected, switching staging and production");
