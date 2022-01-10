@@ -35,11 +35,9 @@ const getTimezoneFromMap = getBrain('timezones').getFromMap
 
 const BRAIN_PREFIX = 'standup-discord';
 // This is the daily-standup channel. This should be an env variable at some point
+// const HUBOT_STANDUP_CHANNEL = '718537795068625036';
 // #Skunkworks
-// const HUBOT_STANDUP_CHANNEL = '720952130562687016';
-const HUBOT_STANDUP_CHANNEL = '718537795068625036';
-// #standup-testing channel
-// const HUBOT_STANDUP_CHANNEL = 'CBX6J6MAA'
+const HUBOT_STANDUP_CHANNEL = '720952130562687016';
 
 const {
   addToMap,
@@ -171,8 +169,7 @@ const checkStandupsDone = robot => {
   const standuppers = Object.values(getMap('standuppers', brain))
 
   if (nobodyHadToWorkToday(standuppers, day)) {
-    return robot.messageChannel(
-      HUBOT_STANDUP_CHANNEL,
+    return channel.send(
       'Yesterday was a free day for everyone! Hope you enjoyed it 🏝'
     )
   }
@@ -190,8 +187,7 @@ const checkStandupsDone = robot => {
     const praises = Object.values(getMap('praises', brain))
     const randomIdx = Math.floor(Math.random() * praises.length)
     const randomPraise = praises[randomIdx]
-    robot.messageChannel(
-      HUBOT_STANDUP_CHANNEL,
+    channel.send(
       `Everyone did their standups yesterday! ${randomPraise ||
         'That makes me a very happy Wookiee!'}`
     )
@@ -200,15 +196,13 @@ const checkStandupsDone = robot => {
     const randomIdx = Math.floor(Math.random() * phrases.length)
     const randomPhrase = phrases[randomIdx]
     if (usersToShame.length === 1) {
-      robot.messageChannel(
-        HUBOT_STANDUP_CHANNEL,
+      channel.send(
         `Only <@${usersToShame[0].id}> forgot to do their standup yesterday. ${randomPhrase}`
       )
     } else {
       const displayUsers = usersToShame.slice()
       const lastUser = displayUsers.pop()
-      robot.messageChannel(
-        HUBOT_STANDUP_CHANNEL,
+      channel.send(
         displayUsers.map(user => `<@${user.id}>`).join(', ') +
           ` and <@${lastUser.id}> did not do their standups yesterday. ${randomPhrase}`
       )
@@ -285,7 +279,8 @@ const setupCronJob = robot => {
     cronTime: '0 46 23 * * 0',
     onTick: () => {
       const leaderboard = getLeaderboard(true, robot.brain)
-      robot.messageChannel(HUBOT_STANDUP_CHANNEL, leaderboard)
+      const channel = robot.client.channels.cache.get(HUBOT_STANDUP_CHANNEL)
+      channel.send(leaderboard)
     },
     start: false,
     // Last time zone of the day (UTC-11)
@@ -296,6 +291,8 @@ const setupCronJob = robot => {
 
 module.exports = robot => {
   const { brain, messageChannel } = robot
+  const channel = robot.client.channels.cache.get(HUBOT_STANDUP_CHANNEL)
+
   setupCronJob(robot)
 
   // These lines are for debugging. Please leave in and commented for now
