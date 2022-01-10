@@ -35,9 +35,9 @@ const getTimezoneFromMap = getBrain('timezones').getFromMap
 
 const BRAIN_PREFIX = 'standup-discord';
 // This is the daily-standup channel. This should be an env variable at some point
-// const HUBOT_STANDUP_CHANNEL = '718537795068625036';
+const HUBOT_STANDUP_CHANNEL = '718537795068625036';
 // #Skunkworks
-const HUBOT_STANDUP_CHANNEL = '720952130562687016';
+// const HUBOT_STANDUP_CHANNEL = '720952130562687016';
 
 const {
   addToMap,
