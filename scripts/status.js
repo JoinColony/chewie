@@ -7,6 +7,7 @@
 const { isChannel, isPrivateDiscordMessage } = require('./utils/channels');
 const fetch = require('node-fetch');
 const ethers = require('ethers')
+const CronJob = require('cron').CronJob
 
 // Minimal ABIs
 
@@ -31,6 +32,8 @@ const SKUNKWORKS_CHANNEL = '720952130562687016';
 const networkABI = require('./abis/IColonyNetwork.json');
 const miningABI = require('./abis/IReputationMiningCycle.json');
 
+let ongoingIncident = false;
+
 module.exports = robot => {
   const { brain, messageChannel } = robot
   const channel = robot.client.channels.cache.get(SKUNKWORKS_CHANNEL)
@@ -45,8 +48,8 @@ module.exports = robot => {
     return "🔴";
   }
 
-  async function postStatus() {
-        message = ""
+  async function getMessage() {
+    message = ""
     // Get latest block from graph
     const graphNumberRes = getGraphLatestBlock("https://xdai.colony.io/graph/subgraphs/name/joinColony/subgraph")
     // Get latest block from blockscout
@@ -92,7 +95,7 @@ module.exports = robot => {
     message += `${status(Math.abs(rpcLatestBlock-blockscoutLatestBlock), 4, 12)} Our RPC latest block: ${rpcLatestBlock}\n`
 
     // Graph latest block
-    message += `${status(Math.abs(graphNumber-blockscoutLatestBlock), 4, 12)} Our graph latest block: ${rpcLatestBlock}\n`
+    message += `${status(Math.abs(graphNumber-blockscoutLatestBlock), 4, 12)} Our graph latest block: ${graphNumber}\n`
 
     // Miner balance
 
@@ -108,16 +111,46 @@ module.exports = robot => {
     rm = new ethers.Contract(miningAddress, miningABI, provider);
     openTimestamp = await rm.getReputationMiningWindowOpenTimestamp();
     secondsSinceOpen = Math.floor(Date.now()/1000) - openTimestamp;
-    message += `${status(secondsSinceOpen, 3600, 3900)} Time since last mining cycle completed: ${(secondsSinceOpen/60).toFixed(0)} minutes\n`
+    message += `${status(secondsSinceOpen, 3600, 4500)} Time since last mining cycle completed: ${(secondsSinceOpen/60).toFixed(0)} minutes\n`
 
     nSubmitted = await rm.getNUniqueSubmittedHashes();
 
     message += `${status(nSubmitted, 2,10000)} ${nSubmitted} unique submissions so far this cycle\n`
-
-    channel.send(message)
+    return message
   }
 
   robot.hear(/!status/, async (res) => {
-    postStatus();
+    const message = await getMessage();
+    channel.send(message)
+    if (message.indexOf("🔴") == -1){
+      ongoingIncident = false;
+    }
   })
+
+  async function checkStatus(){
+    const message = await getMessage();
+    if (message.indexOf("🔴") != -1 && !ongoingIncident){
+      ongoingIncident = true;
+      channel.send("There appears to be an incident. Someone smarter than me needs to handle it. \n" + message)
+    }
+    if (message.indexOf("🔴") == -1 && ongoingIncident){
+      ongoingIncident = false;
+      channel.send("Incident appears resolved.\n" + message)
+    }
+  }
+
+  const setupCronJob = robot => {
+  const job = new CronJob({
+    // Every minute
+    cronTime: '00 * * * * *',
+    onTick: () => {
+      checkStatus()
+    },
+    start: true,
+    // Last time zone of the day (UTC-11)
+    timeZone: 'Pacific/Niue'
+  })
+  job.start()
+  }
+  setupCronJob(robot)
 }
