@@ -1,0 +1,22 @@
+[
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "_active",
+          "type": "bool"
+        }
+      ],
+      "name": "getReputationMiningCycle",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "repMiningCycleAddress",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    }
+  ]

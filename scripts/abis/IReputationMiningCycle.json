@@ -1,0 +1,28 @@
+[{
+      "inputs": [],
+      "name": "getReputationMiningWindowOpenTimestamp",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "getNUniqueSubmittedHashes",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "nUniqueSubmittedHashes",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    }]
