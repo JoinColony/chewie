@@ -92,10 +92,10 @@ module.exports = robot => {
     output = await RPCBlock.json()
     rpcLatestBlock = parseInt(output.result,16)
 
-    message += `${status(Math.abs(rpcLatestBlock-blockscoutLatestBlock), 4, 12)} Our RPC latest block: ${rpcLatestBlock}\n`
+    message += `${status(Math.abs(rpcLatestBlock-blockscoutLatestBlock), 12, 24)} Our RPC latest block: ${rpcLatestBlock}\n`
 
     // Graph latest block
-    message += `${status(Math.abs(graphNumber-blockscoutLatestBlock), 4, 12)} Our graph latest block: ${graphNumber}\n`
+    message += `${status(Math.abs(graphNumber-blockscoutLatestBlock), 12, 24)} Our graph latest block: ${graphNumber}\n`
 
     // Miner balance
 
