@@ -8,6 +8,7 @@ const { isChannel, isPrivateDiscordMessage } = require('./utils/channels');
 const fetch = require('node-fetch');
 const ethers = require('ethers')
 const CronJob = require('cron').CronJob
+const exec = require('await-exec')
 
 // Minimal ABIs
 
@@ -97,6 +98,24 @@ module.exports = robot => {
     // Graph latest block
     message += `${status(Math.abs(graphNumber-blockscoutLatestBlock), 12, 24)} Our graph latest block: ${graphNumber}\n`
 
+    if ((blockscoutLatestBlock - graphNumber) > 24 && !ongoingIncident){
+      try { // Try and restart the graph digest pod
+        // By the time this happens, the deployments script should have authed us
+        // Get production colour
+        let res = await exec("kubectl get svc nginx-prod-2 -o yaml | grep colour: | awk '{print $2}' | tr -d '\n'")
+        const productionColour = res.stdout;
+        // Get production graph digest node
+        res = await exec(`kubectl get pods --sort-by=.metadata.creationTimestamp | grep digest-${productionColour} | tail -n1 | awk '{print $1}' | tr -d '\n'`)
+        const productionGraphDigest = res.stdout;
+        // delete it
+        await exec(`kubectl delete pod ${productionGraphDigest}`)
+        message += "**I have tried to restart the graph. If successful, incident will resolve itself shortly**\n"
+      } catch (err) {
+        console.log(err)
+        message += "**Attempted restart of graph failed - check logs. I will not try again for this incident**\n"
+      }
+    }
+
     // Miner balance
 
     output = await balance.json()
@@ -131,7 +150,7 @@ module.exports = robot => {
     const message = await getMessage();
     if (message.indexOf("🔴") != -1 && !ongoingIncident){
       ongoingIncident = true;
-      channel.send("There appears to be an incident. Someone smarter than me needs to handle it. \n" + message)
+      channel.send("There appears to be an incident. \n" + message)
     }
     if (message.indexOf("🔴") == -1 && ongoingIncident){
       ongoingIncident = false;
