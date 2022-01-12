@@ -96,9 +96,9 @@ module.exports = robot => {
     message += `${status(Math.abs(rpcLatestBlock-blockscoutLatestBlock), 12, 24)} Our RPC latest block: ${rpcLatestBlock}\n`
 
     // Graph latest block
-    message += `${status(Math.abs(graphNumber-blockscoutLatestBlock), 12, 24)} Our graph latest block: ${graphNumber}\n`
+    message += `${status(Math.abs(graphNumber-blockscoutLatestBlock), 24, 48)} Our graph latest block: ${graphNumber}\n`
 
-    if ((blockscoutLatestBlock - graphNumber) > 24 && !ongoingIncident){
+    if ((blockscoutLatestBlock - graphNumber) >= 48 && !ongoingIncident){
       try { // Try and restart the graph digest pod
         // By the time this happens, the deployments script should have authed us
         // Get production colour
