@@ -55,6 +55,21 @@ module.exports = robot => {
     const graphNumberRes = getGraphLatestBlock("https://xdai.colony.io/graph/subgraphs/name/joinColony/subgraph")
     // Get latest block from blockscout
     const blockscoutRes = fetch("https://blockscout.com/xdai/mainnet/api?module=block&action=eth_block_number")
+
+    // Get latest block from our RPC
+    xdaichainRpcRes = fetch("https://rpc.xdaichain.com/", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        "jsonrpc":"2.0",
+        "method":"eth_blockNumber",
+        "params":[],
+        "id":1
+      })
+    })
+
     // Get latest block from our RPC
     rpcRes = fetch("https://xdai.colony.io/rpc2/", {
       method: 'POST',
@@ -83,20 +98,33 @@ module.exports = robot => {
       })
     })
 
-    const [graphNumber, blockScoutBlock, RPCBlock, balance] = await Promise.all([graphNumberRes, blockscoutRes, rpcRes, balanceRes])
+    const [graphNumber, blockScoutBlock, RPCBlock, balance, xdaichainRpcBlock] = await Promise.all([graphNumberRes, blockscoutRes, rpcRes, balanceRes, xdaichainRpcRes])
 
     output = await blockScoutBlock.json()
     const blockscoutLatestBlock = parseInt(output.result,16)
     message += `Blockscout latest block: ${blockscoutLatestBlock}\n`
 
+    // Xdaichain.com latest block
+    output = await xdaichainRpcBlock.json()
+    xdaichainLatestBlock = parseInt(output.result,16)
+    message += `Xdaichain.com latest block: ${xdaichainLatestBlock}\n`
+
     // How does our rpc block compare?
     output = await RPCBlock.json()
     rpcLatestBlock = parseInt(output.result,16)
-
-    message += `${status(Math.abs(rpcLatestBlock-blockscoutLatestBlock), 12, 24)} Our RPC latest block: ${rpcLatestBlock}\n`
+    smallestRpcDiscrepancy = Math.min(
+        Math.abs(rpcLatestBlock-blockscoutLatestBlock),
+        Math.abs(rpcLatestBlock-xdaichainLatestBlock)
+    )
+    message += `${status(smallestRpcDiscrepancy, 12, 24)} Our RPC latest block: ${rpcLatestBlock}\n`
 
     // Graph latest block
-    message += `${status(Math.abs(graphNumber-blockscoutLatestBlock), 24, 48)} Our graph latest block: ${graphNumber}\n`
+    smallestGraphDiscrepancy = Math.min(
+        Math.abs(graphNumber-blockscoutLatestBlock),
+        Math.abs(graphNumber-xdaichainLatestBlock)
+    )
+
+    message += `${status(smallestGraphDiscrepancy, 24, 48)} Our graph latest block: ${graphNumber}\n`
 
     if ((blockscoutLatestBlock - graphNumber) >= 48 && !ongoingIncident){
       try { // Try and restart the graph digest pod
@@ -138,7 +166,7 @@ module.exports = robot => {
     return message
   }
 
-  robot.hear(/!status/, async (res) => {
+  robot.hear(/^!status$/, async (res) => {
     const message = await getMessage();
     channel.send(message)
     if (message.indexOf("🔴") == -1){
