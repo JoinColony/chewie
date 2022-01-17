@@ -139,7 +139,7 @@ const getLeaderboard = (rerank, brain) => {
       rankScore = user.currentCount
       output += '=============================\n'
     }
-    lastOfficialRank = user.lastOfficialRank
+    const lastOfficialRank = user.lastOfficialRank
     let movement
     if (!lastOfficialRank) {
       movement = '*️⃣'
@@ -167,6 +167,7 @@ const checkStandupsDone = robot => {
   const date = getOffsetDate(-11)
   const day = getOffsetDay(-11)
   const standuppers = Object.values(getMap('standuppers', brain))
+  const channel = robot.client.channels.cache.get(HUBOT_STANDUP_CHANNEL)
 
   if (nobodyHadToWorkToday(standuppers, day)) {
     return channel.send(
@@ -290,7 +291,7 @@ const setupCronJob = robot => {
 }
 
 module.exports = robot => {
-  const { brain, messageChannel } = robot
+  const { brain } = robot
   const channel = robot.client.channels.cache.get(HUBOT_STANDUP_CHANNEL)
 
   setupCronJob(robot)
