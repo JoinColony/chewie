@@ -33,7 +33,8 @@ const SKUNKWORKS_CHANNEL = '720952130562687016';
 const networkABI = require('./abis/IColonyNetwork.json');
 const miningABI = require('./abis/IReputationMiningCycle.json');
 
-let ongoingIncident = false;
+let ongoingGenericIncident = false;
+let ongoingGraphIncident = false;
 
 module.exports = robot => {
   const { brain, messageChannel } = robot
@@ -50,7 +51,7 @@ module.exports = robot => {
   }
 
   async function getMessage() {
-    message = ""
+    let message = ""
     // Get latest block from graph
     const graphNumberRes = getGraphLatestBlock("https://xdai.colony.io/graph/subgraphs/name/joinColony/subgraph")
     // Get latest block from blockscout
@@ -126,7 +127,7 @@ module.exports = robot => {
 
     message += `${status(smallestGraphDiscrepancy, 24, 48)} Our graph latest block: ${graphNumber}\n`
 
-    if ((blockscoutLatestBlock - graphNumber) >= 48 && !ongoingIncident){
+    if ((blockscoutLatestBlock - graphNumber) >= 48 && !ongoingGraphIncident){
       try { // Try and restart the graph digest pod
         // By the time this happens, the deployments script should have authed us
         // Get production colour
@@ -170,18 +171,24 @@ module.exports = robot => {
     const message = await getMessage();
     channel.send(message)
     if (message.indexOf("🔴") == -1){
-      ongoingIncident = false;
+      ongoingGenericIncident = false;
+      ongoingGraphIncident = false;
     }
   })
 
   async function checkStatus(){
     const message = await getMessage();
-    if (message.indexOf("🔴") != -1 && !ongoingIncident){
-      ongoingIncident = true;
-      channel.send("There appears to be an incident. \n" + message)
+    if (message.indexOf("🔴 Our graph latest block") != -1 && !ongoingGraphIncident) {
+      ongoingGraphIncident = true;
+      channel.send("There appears to be an incident with the graph. \n" + message)
+    } else if (message.indexOf("🔴") != -1 && !ongoingGenericIncident){
+      ongoingGenericIncident = true;
+      channel.send("There appears to be a generic incident. \n" + message)
     }
-    if (message.indexOf("🔴") == -1 && ongoingIncident){
-      ongoingIncident = false;
+
+    if (message.indexOf("🔴") == -1 && (ongoingGenericIncident || ongoingGraphIncident)) {
+      ongoingGenericIncident = false;
+      ongoingGraphIncident = false;
       channel.send("Incident appears resolved.\n" + message)
     }
   }
