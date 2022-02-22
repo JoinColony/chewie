@@ -181,7 +181,7 @@ module.exports = robot => {
     if (message.indexOf("🔴 Our graph latest block") != -1 && !ongoingGraphIncident) {
       ongoingGraphIncident = true;
       channel.send("There appears to be an incident with the graph. \n" + message)
-    } else if (message.indexOf("🔴") != -1 && !ongoingGenericIncident){
+    } else if (message.indexOf("🔴") != -1 && !ongoingGenericIncident && !ongoingGraphIncident){
       ongoingGenericIncident = true;
       channel.send("There appears to be a generic incident. \n" + message)
     }
