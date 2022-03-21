@@ -35,6 +35,7 @@ const miningABI = require('./abis/IReputationMiningCycle.json');
 
 let ongoingGenericIncident = false;
 let ongoingGraphIncident = false;
+let ongoingQAIncident = false;
 
 module.exports = robot => {
   const { brain, messageChannel } = robot
@@ -54,6 +55,11 @@ module.exports = robot => {
     let message = ""
     // Get latest block from graph
     const graphNumberRes = getGraphLatestBlock("https://xdai.colony.io/graph/subgraphs/name/joinColony/subgraph")
+
+    // Get latest block from QA graph
+
+    const qaGraphNumberRes = getGraphLatestBlock("http://thegraph-query-red-network-100:8000/subgraphs/name/joinColony/subgraph")
+
     // Get latest block from blockscout
     const blockscoutRes = fetch("https://blockscout.com/xdai/mainnet/api?module=block&action=eth_block_number")
 
@@ -99,7 +105,7 @@ module.exports = robot => {
       })
     })
 
-    const [graphNumber, blockScoutBlock, RPCBlock, balance, xdaichainRpcBlock] = await Promise.all([graphNumberRes, blockscoutRes, rpcRes, balanceRes, xdaichainRpcRes])
+    const [graphNumber, qaGraphNumber, blockScoutBlock, RPCBlock, balance, xdaichainRpcBlock] = await Promise.all([graphNumberRes, qaGraphNumberRes, blockscoutRes, rpcRes, balanceRes, xdaichainRpcRes])
 
     output = await blockScoutBlock.json()
     const blockscoutLatestBlock = parseInt(output.result,16)
@@ -144,6 +150,34 @@ module.exports = robot => {
         message += "**Attempted restart of graph failed - check logs. I will not try again for this incident**\n"
       }
     }
+
+    // QA Graph latest block
+    smallestQAGraphDiscrepancy = Math.min(
+        Math.abs(qaGraphNumber-blockscoutLatestBlock),
+        Math.abs(qaGraphNumber-xdaichainLatestBlock)
+    )
+
+    if ((blockscoutLatestBlock - qaGraphNumber) >= 48  && !ongoingQAIncident){
+      ongoingQAIncident = true;
+      try { // Try and restart the qa graph digest pod
+        // By the time this happens, the deployments script should have authed us
+        // QA colour is red
+        const colour = "red"
+        // Get production graph digest node
+        res = await exec(`kubectl get pods --sort-by=.metadata.creationTimestamp | grep digest-${colour} | tail -n1 | awk '{print $1}' | tr -d '\n'`)
+        const qaGraphDigest = res.stdout;
+        // delete it
+        await exec(`kubectl delete pod ${qaGraphDigest}`)
+        await channel.send(`**Attempted to restart QA subgraph as it appeared ${smallestQAGraphDiscrepancy} blocks behind.**`)
+      } catch (err) {
+        console.log(err)
+        await channel.send("**Attempted restart of QA graph failed - check logs.**\n")
+      }
+    } else if ((blockscoutLatestBlock - qaGraphNumber) < 48  && ongoingQAIncident){
+      ongoingQAIncident = false;
+      await channel.send(`QA subgraph appears fixed`)
+    }
+
 
     // Miner balance
 
