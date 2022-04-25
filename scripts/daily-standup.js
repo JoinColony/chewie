@@ -485,7 +485,7 @@ module.exports = robot => {
     res.send(`OK, I removed this excuse: ${res.match[1]}`)
   })
 
-  robot.hear('standup excuse list', res => {
+  robot.hear(/^standup excuse list$/, res => {
     const { user } = res.message
     if (!isPrivateDiscordMessage(robot.client, res) || !isStandupper(user, brain)) return
     const map = getMap(`excuses-${user.id}`, brain)
@@ -499,6 +499,25 @@ module.exports = robot => {
       )}`
     )
   })
+
+  robot.hear('standup admin excuse list (.+)', res => {
+
+    const { user } = res.message
+    if (!isPrivateDiscordMessage(robot.client, res) || !isAdmin(user, brain)) return
+    const userId = res.match[1]
+
+    const map = getMap(`excuses-${userId}`, brain)
+    const excuses = Object.keys(map).map(excuse => `• ${excuse}`)
+    if (!excuses.length) {
+      return res.send('No excuses found! 🤙')
+    }
+    res.send(
+      `OK, here's a list of all the days they're excused:\n${excuses.join(
+        '\n'
+      )}`
+    )
+  })
+
 
   // These lines are for debugging. Please leave in and commented for now
   robot.hear('blame', res => {
