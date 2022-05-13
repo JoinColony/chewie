@@ -3,9 +3,9 @@
 //
 
 const fetch = require('node-fetch')
+const { Wallet } = require('ethers')
 const { getAddress } = require('ethers/utils')
 
-const { getWallet } = require('./utils/wallet')
 const { getChallenge, getToken } = require('./utils/colonyServer.service')
 
 // #Skunkworks
@@ -16,7 +16,7 @@ module.exports = robot => {
 
   async function getMessage() {
     // Use software wallet for members requests
-    const wallet = await getWallet()
+    const wallet = await Wallet.createRandom()
 
     // Get jwt token
     const { challenge } = await getChallenge(wallet)
