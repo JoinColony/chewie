@@ -9,7 +9,7 @@ const { getWallet } = require('./utils/wallet');
 const { getChallenge, getToken } = require('./utils/colonyServer.service');
 
 // #Skunkworks
-const SKUNKWORKS_CHANNEL = '965968631047549070'; // AGREEMI DEV CHANNEL
+const SKUNKWORKS_CHANNEL = process.env.SKUNKWORKS_DISCORD_CHANNEL;
 
 module.exports = robot => {
   const channel = robot.client.channels.cache.get(SKUNKWORKS_CHANNEL)
