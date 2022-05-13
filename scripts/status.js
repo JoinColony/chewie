@@ -29,7 +29,7 @@ async function getGraphLatestBlock(url) {
 }
 
 // #Skunkworks
-const SKUNKWORKS_CHANNEL = '720952130562687016';
+const SKUNKWORKS_CHANNEL = process.env.SKUNKWORKS_DISCORD_CHANNEL;
 const networkABI = require('./abis/IColonyNetwork.json');
 const miningABI = require('./abis/IReputationMiningCycle.json');
 

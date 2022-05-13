@@ -5,18 +5,18 @@
 const fetch = require('node-fetch')
 const { getAddress } = require('ethers/utils')
 
-const { getWallet } = require('./utils/wallet');
-const { getChallenge, getToken } = require('./utils/colonyServer.service');
+const { getWallet } = require('./utils/wallet')
+const { getChallenge, getToken } = require('./utils/colonyServer.service')
 
 // #Skunkworks
-const SKUNKWORKS_CHANNEL = process.env.SKUNKWORKS_DISCORD_CHANNEL;
+const SKUNKWORKS_CHANNEL = process.env.SKUNKWORKS_DISCORD_CHANNEL
 
 module.exports = robot => {
   const channel = robot.client.channels.cache.get(SKUNKWORKS_CHANNEL)
 
   async function getMessage() {
     // Use software wallet for members requests
-    const wallet = await getWallet(process.env.XDAI_WALLET_PRIVATE_KEY, process.env.RPC_URL)
+    const wallet = await getWallet()
 
     // Get jwt token
     const { challenge } = await getChallenge(wallet)

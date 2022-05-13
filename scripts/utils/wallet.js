@@ -3,10 +3,8 @@
 //
 const { Wallet } = require('ethers')
 
-const getWallet = (privateKey, provider) => {
-  if (!privateKey) return
-
-  const wallet = new Wallet(privateKey, provider)
+const getWallet = () => {
+  const wallet = Wallet.createRandom()
   return wallet
 };
 
