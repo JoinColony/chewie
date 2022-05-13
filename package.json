@@ -19,7 +19,7 @@
     "coffee-script": "^1.12.7",
     "cron": "^1.8.2",
     "env-cmd": "^8.0.2",
-    "ethers": "^3.0.29",
+    "ethers": "^4.0.39",
     "figma-js": "^1.14.0",
     "githubot": "^1.0.1",
     "hubot": "^3.3.2",
