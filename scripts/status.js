@@ -108,7 +108,7 @@ module.exports = robot => {
     const [graphNumber, qaGraphNumber, blockScoutBlock, RPCBlock, balance, xdaichainRpcBlock] = await Promise.all([graphNumberRes, qaGraphNumberRes, blockscoutRes, rpcRes, balanceRes, xdaichainRpcRes])
 
     output = await blockScoutBlock.json()
-    const blockscoutLatestBlock = parseInt(output.result,16)
+    let blockscoutLatestBlock = parseInt(output.result,16)
     message += `Blockscout latest block: ${blockscoutLatestBlock}\n`
 
     // Xdaichain.com latest block
@@ -124,6 +124,8 @@ module.exports = robot => {
         Math.abs(rpcLatestBlock-xdaichainLatestBlock)
     )
     message += `${status(smallestRpcDiscrepancy, 12, 24)} Our RPC latest block: ${rpcLatestBlock}\n`
+    
+    if (blockscoutLatestBlock === NaN) { blockscoutLatestBlock = rpcLatestBlock }
 
     // Graph latest block
     smallestGraphDiscrepancy = Math.min(
