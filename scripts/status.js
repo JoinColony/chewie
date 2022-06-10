@@ -119,14 +119,15 @@ module.exports = robot => {
     // How does our rpc block compare?
     output = await RPCBlock.json()
     rpcLatestBlock = parseInt(output.result,16)
+    
+    if (blockscoutLatestBlock === NaN) { blockscoutLatestBlock = rpcLatestBlock }
+
     smallestRpcDiscrepancy = Math.min(
         Math.abs(rpcLatestBlock-blockscoutLatestBlock),
         Math.abs(rpcLatestBlock-xdaichainLatestBlock)
     )
     message += `${status(smallestRpcDiscrepancy, 12, 24)} Our RPC latest block: ${rpcLatestBlock}\n`
     
-    if (blockscoutLatestBlock === NaN) { blockscoutLatestBlock = rpcLatestBlock }
-
     // Graph latest block
     smallestGraphDiscrepancy = Math.min(
         Math.abs(graphNumber-blockscoutLatestBlock),
