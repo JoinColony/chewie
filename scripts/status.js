@@ -120,7 +120,7 @@ module.exports = robot => {
     output = await RPCBlock.json()
     rpcLatestBlock = parseInt(output.result,16)
     
-    if (blockscoutLatestBlock === null) { blockscoutLatestBlock = rpcLatestBlock }
+    if (isNaN(blockscoutLatestBlock)) { blockscoutLatestBlock = rpcLatestBlock }
 
     smallestRpcDiscrepancy = Math.min(
         Math.abs(rpcLatestBlock-blockscoutLatestBlock),
