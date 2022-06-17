@@ -125,13 +125,13 @@ const hasUserDoneAStandupInTimeToday = (user, date, brain) => {
 // Generates and returns the list of users and days off this year
 const getDaysOffList = (brain) => {
   const standuppers = Object.values(getMap('standuppers', brain)).sort(
-    (a, b) => getUserName(a, brain) > getUserName(b, brain) ? 1 : -1
+    (a, b) => getUserName(a, brain).toLowerCase() > getUserName(b, brain).toLowerCase() ? 1 : -1
   )
   let output = '**Number of days off since June 17**\n'
   output += '=============================\n'
   standuppers.forEach(user => {
     output += ` ${getUserName(user, brain)} -- ${
-      user.nDaysOff
+      user.nDaysOff ? user.nDaysOff : 0
     }\n`
   })
   output += '=============================\n'
