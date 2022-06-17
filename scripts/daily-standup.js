@@ -265,9 +265,10 @@ const checkStandupsDone = robot => {
   const usersToIncrementDaysOff = standuppers
     // Users who had to post a standup today
     .filter(user => userHasToWorkToday(user, day))
-    // Users who are excused today are incremented
+    // Users who are excused today are incremented if they didn't post a standup
     .filter(
       user =>
+        !hasUserDoneAStandupInTimeToday(user, date, brain) &&
         isUserExcusedToday(user, date, brain)
     )
     .forEach(user => {
