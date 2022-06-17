@@ -64,7 +64,7 @@ module.exports = robot => {
     const blockscoutRes = fetch("https://blockscout.com/xdai/mainnet/api?module=block&action=eth_block_number")
 
     // Get latest block from our RPC
-    xdaichainRpcRes = fetch("https://rpc.xdaichain.com/", {
+    xdaichainRpcRes = fetch("https://rpc.gnosischain.com/", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
