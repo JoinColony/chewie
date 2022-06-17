@@ -122,6 +122,22 @@ const hasUserDoneAStandupInTimeToday = (user, date, brain) => {
   return !!(standups[user.id] && standups[user.id] < 12)
 }
 
+// Generates and returns the list of users and days off this year
+const getDaysOffList = (brain) => {
+  const standuppers = Object.values(getMap('standuppers', brain)).sort(
+    (a, b) => getUserName(a, brain) > getUserName(b, brain) ? 1 : -1
+  )
+  let output = '**Number of days off since June 17**\n'
+  output += '=============================\n'
+  standuppers.forEach(user => {
+    output += ` ${getUserName(user, brain)} -- ${
+      user.nDaysOff
+    }\n`
+  })
+  output += '=============================\n'
+  return output
+}
+
 // Generates and returns the leaderboard. If rerank is passed as true, the users'q most-recent-official-rankings
 // will be updated.
 const getLeaderboard = (rerank, brain) => {
@@ -245,6 +261,23 @@ const checkStandupsDone = robot => {
       }
       updateMap('standuppers', user.id, user, brain)
     })
+
+  const usersToIncrementDaysOff = standuppers
+    // Users who had to post a standup today
+    .filter(user => userHasToWorkToday(user, day))
+    // Users who are excused today are incremented
+    .filter(
+      user =>
+        isUserExcusedToday(user, date, brain)
+    )
+    .forEach(user => {
+      if (!user.nDaysOff) {
+        user.nDaysOff = 1
+      } else {
+        user.nDaysOff += 1
+      }
+      updateMap('standuppers', user.id, user, brain)
+    })
 }
 
 const cleanUpExcuses = robot => {
@@ -292,7 +325,6 @@ const setupCronJob = robot => {
 
 module.exports = robot => {
   const { brain } = robot
-  const channel = robot.client.channels.cache.get(HUBOT_STANDUP_CHANNEL)
 
   setupCronJob(robot)
 
@@ -533,6 +565,14 @@ module.exports = robot => {
     res.send(output)
   })
 
+  robot.hear('standup days off', res => {
+    const { user } = res.message
+    if (!isPrivateDiscordMessage(robot.client, res) || !isStandupper(user, brain)) return
+    const output = getDaysOffList(brain)
+    res.send(output)
+  })
+
+
   robot.hear(/standup admin leaderboard reset (.+)/, res => {
     const { user } = res.message
     if (!isPrivateDiscordMessage(robot.client, res) || !isAdmin(user, brain)) return
@@ -545,4 +585,18 @@ module.exports = robot => {
       })
     res.send("It's like they never did a standup (or more accurately, it's like they missed yesterday).");
   })
+
+  robot.hear(/standup admin days off reset (.+)/, res => {
+    const { user } = res.message
+    if (!isPrivateDiscordMessage(robot.client, res) || !isAdmin(user, brain)) return
+    const standuppers = Object.values(getMap('standuppers', brain))
+    standuppers
+      .filter(user => getUserName(user, brain) == res.match[1])
+      .forEach(user => {
+        user.nDaysOff = 0
+        updateMap('standuppers', user.id, user, brain)
+      })
+    res.send("It's like they've never had a day off.");
+  })
+
 }
