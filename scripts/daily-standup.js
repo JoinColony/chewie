@@ -322,6 +322,22 @@ const setupCronJob = robot => {
     timeZone: 'Pacific/Niue'
   })
   leaderboardJob.start()
+  
+  
+  const holidayJob = new CronJob({
+    // Every sunday at 23:47h, in Pacific/Niue - monday for most people.
+    cronTime: '0 47 23 * * 0',
+    onTick: () => {
+      const holidayList = getDaysOffList(robot.brain)
+      const channel = robot.client.channels.cache.get(HUBOT_STANDUP_CHANNEL)
+      channel.send(holidayList)
+    },
+    start: false,
+    // Last time zone of the day (UTC-11)
+    timeZone: 'Pacific/Niue'
+  })
+  holidayJob.start()
+
 }
 
 module.exports = robot => {
