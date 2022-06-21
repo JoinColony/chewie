@@ -114,7 +114,7 @@ module.exports = robot => {
     // Gnosischain.com latest block
     output = await gnosischainRpcBlock.json()
     gnosischainLatestBlock = parseInt(output.result,16)
-    message += `Gnosischain.com latest block: ${gnosisschainLatestBlock}\n`
+    message += `Gnosischain.com latest block: ${gnosischainLatestBlock}\n`
 
     // How does our rpc block compare?
     output = await RPCBlock.json()
