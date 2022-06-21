@@ -64,7 +64,7 @@ module.exports = robot => {
     const blockscoutRes = fetch("https://blockscout.com/xdai/mainnet/api?module=block&action=eth_block_number")
 
     // Get latest block from our RPC
-    xdaichainRpcRes = fetch("https://rpc.gnosischain.com/", {
+    gnosischainRpcRes = fetch("https://rpc.gnosischain.com/", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -105,16 +105,16 @@ module.exports = robot => {
       })
     })
 
-    const [graphNumber, qaGraphNumber, blockScoutBlock, RPCBlock, balance, xdaichainRpcBlock] = await Promise.all([graphNumberRes, qaGraphNumberRes, blockscoutRes, rpcRes, balanceRes, xdaichainRpcRes])
+    const [graphNumber, qaGraphNumber, blockScoutBlock, RPCBlock, balance, gnosischainRpcBlock] = await Promise.all([graphNumberRes, qaGraphNumberRes, blockscoutRes, rpcRes, balanceRes, gnosischainRpcRes])
 
     output = await blockScoutBlock.json()
     let blockscoutLatestBlock = parseInt(output.result,16)
     message += `Blockscout latest block: ${blockscoutLatestBlock}\n`
 
-    // Xdaichain.com latest block
-    output = await xdaichainRpcBlock.json()
-    xdaichainLatestBlock = parseInt(output.result,16)
-    message += `Xdaichain.com latest block: ${xdaichainLatestBlock}\n`
+    // Gnosischain.com latest block
+    output = await gnosischainRpcBlock.json()
+    gnosischainLatestBlock = parseInt(output.result,16)
+    message += `Gnosischain.com latest block: ${gnosisschainLatestBlock}\n`
 
     // How does our rpc block compare?
     output = await RPCBlock.json()
@@ -124,14 +124,14 @@ module.exports = robot => {
 
     smallestRpcDiscrepancy = Math.min(
         Math.abs(rpcLatestBlock-blockscoutLatestBlock),
-        Math.abs(rpcLatestBlock-xdaichainLatestBlock)
+        Math.abs(rpcLatestBlock-gnosischainLatestBlock)
     )
     message += `${status(smallestRpcDiscrepancy, 12, 24)} Our RPC latest block: ${rpcLatestBlock}\n`
     
     // Graph latest block
     smallestGraphDiscrepancy = Math.min(
         Math.abs(graphNumber-blockscoutLatestBlock),
-        Math.abs(graphNumber-xdaichainLatestBlock)
+        Math.abs(graphNumber-gnosischainLatestBlock)
     )
 
     message += `${status(smallestGraphDiscrepancy, 24, 48)} Our graph latest block: ${graphNumber}\n`
@@ -157,7 +157,7 @@ module.exports = robot => {
     // QA Graph latest block
     smallestQAGraphDiscrepancy = Math.min(
         Math.abs(qaGraphNumber-blockscoutLatestBlock),
-        Math.abs(qaGraphNumber-xdaichainLatestBlock)
+        Math.abs(qaGraphNumber-gnosischainLatestBlock)
     )
 
     if ((blockscoutLatestBlock - qaGraphNumber) >= 48  && !ongoingQAIncident){
@@ -189,7 +189,7 @@ module.exports = robot => {
     message += `${status(-minerBalance, -1, -0.5)} Miner balance: ${minerBalance}\n`
 
     // Get reputation mining cycle status
-    const provider = new ethers.providers.JsonRpcProvider("https://rpc.xdaichain.com")
+    const provider = new ethers.providers.JsonRpcProvider("https://rpc.gnosischain.com")
     cn = new ethers.Contract(process.env.NETWORK_ADDRESS, networkABI, provider)
     miningAddress = await cn.getReputationMiningCycle(true);
 
