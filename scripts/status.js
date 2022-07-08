@@ -104,8 +104,23 @@ module.exports = robot => {
         "id":1
       })
     })
+    
+    // Get mtx broadcaster balance.
+    mtxBalanceRes = fetch("https://xdai.colony.io/rpc2/", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        "jsonrpc":"2.0",
+        "method":"eth_getBalance",
+        "params":[process.env.BROADCASTER_ADDRESS],
+        "id":1
+      })
+    })
 
-    const [graphNumber, qaGraphNumber, blockScoutBlock, RPCBlock, balance, gnosischainRpcBlock] = await Promise.all([graphNumberRes, qaGraphNumberRes, blockscoutRes, rpcRes, balanceRes, gnosischainRpcRes])
+
+    const [graphNumber, qaGraphNumber, blockScoutBlock, RPCBlock, balance, gnosischainRpcBlock, mtxBalance] = await Promise.all([graphNumberRes, qaGraphNumberRes, blockscoutRes, rpcRes, balanceRes, gnosischainRpcRes, mtxBalanceRes])
 
     output = await blockScoutBlock.json()
     let blockscoutLatestBlock = parseInt(output.result,16)
@@ -187,6 +202,11 @@ module.exports = robot => {
     output = await balance.json()
     minerBalance = parseInt(output.result,16)/10**18
     message += `${status(-minerBalance, -1, -0.5)} Miner balance: ${minerBalance}\n`
+
+    // MTX Broadcaster balance
+    output = await mtxBalance.json()
+    mtxBalance = parseInt(output.result,16)/10**18
+    message += `${status(-mtxBalance, -1, -0.5)} Metatx broadcaster balance: ${mtxBalance}\n`
 
     // Get reputation mining cycle status
     const provider = new ethers.providers.JsonRpcProvider("https://rpc.gnosischain.com")
