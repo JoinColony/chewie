@@ -206,7 +206,7 @@ module.exports = robot => {
     // MTX Broadcaster balance
     output = await mtxBalance.json()
     broadcasterBalance = parseInt(output.result,16)/10**18
-    message += `${status(-mtxBalance, -1, -0.5)} Metatx broadcaster balance: ${broadcasterBalance}\n`
+    message += `${status(-broadcasterBalance, -1, -0.5)} Metatx broadcaster balance: ${broadcasterBalance}\n`
 
     // Get reputation mining cycle status
     const provider = new ethers.providers.JsonRpcProvider("https://rpc.gnosischain.com")
