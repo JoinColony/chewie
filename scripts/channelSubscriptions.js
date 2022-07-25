@@ -40,6 +40,8 @@ const {
   robot.hear(/.*/, async res => {
     const { message } = res;
     const channelId = message.room;
+    let channel = await robot.client.channels.fetch(channelId)
+    let member = await channel.guild.members.fetch(message.user.id)
     // Is message in a channel that someone has subscribed to?
     const l = getMap('subscriptions', brain);
     if (l[channelId]){
@@ -47,7 +49,7 @@ const {
         const subscribed = l[channelId][userid]
         if (subscribed){
           const u = await robot.client.users.fetch(userid);
-          u.send(`<${message.user.name}> ${message.text}`);
+          u.send(`_In ${channel.name}:_ **<${member.nickname}>** ${message.text}`);
         }
       }
     }
