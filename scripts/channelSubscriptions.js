@@ -47,7 +47,7 @@ const {
     if (l[channelId]){
       for (const userid of Object.keys(l[channelId])){
         const subscribed = l[channelId][userid]
-        if (subscribed){
+        if (subscribed && message.user.id != userid){
           const u = await robot.client.users.fetch(userid);
           u.send(`_In ${channel.name}:_ **<${member.nickname}>** ${message.text}`);
         }
