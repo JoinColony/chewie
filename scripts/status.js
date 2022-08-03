@@ -1,10 +1,9 @@
 // Description:
-//   Daily standup public shaming
-//   TODO
-//
+//   Continuous status monitoring for various metrics
 
+/* global process */
 
-const { isChannel, isPrivateDiscordMessage } = require('./utils/channels');
+// const { isChannel, isPrivateDiscordMessage } = require('./utils/channels');
 const fetch = require('node-fetch');
 const ethers = require('ethers')
 const CronJob = require('cron').CronJob
@@ -13,19 +12,78 @@ const exec = require('await-exec')
 // Minimal ABIs
 
 async function getGraphLatestBlock(url) {
-  let query = {"query": "{_meta{block {number} }}"}
+  try {
+    let query = {"query": "{_meta{block {number} }}"}
 
-  res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify(query)
-  })
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(query)
+    })
 
-  let r = await res.json()
-  return parseInt(r.data._meta.block.number);
+    let r = await res.json()
+    return parseInt(r.data._meta.block.number);
+  } catch (err) {
+    return -1;
+  }
+}
+
+async function getRPCLatestBlock(url) {
+  try {
+    const rpcRes = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        "jsonrpc":"2.0",
+        "method":"eth_blockNumber",
+        "params":[],
+        "id":1
+      })
+    })
+    const output = await rpcRes.json()
+    const blockNumber = parseInt(output.result,16)
+    return blockNumber
+  } catch (err) {
+    return -1;
+  }
+}
+
+async function getBlockscoutLatestBlock() {
+  try {
+    const blockScoutBlock = await fetch("https://blockscout.com/xdai/mainnet/api?module=block&action=eth_block_number")
+    const output = await blockScoutBlock.json()
+    let blockscoutLatestBlock = parseInt(output.result,16)
+    return blockscoutLatestBlock;
+  } catch (err) {
+    return -1;
+  }
+}
+
+async function getBalance(account, url) {
+  try {
+    const balanceRes = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        "jsonrpc":"2.0",
+        "method":"eth_getBalance",
+        "params":[account],
+        "id":1
+      })
+    })
+    const output = await balanceRes.json()
+    const balance = parseInt(output.result,16)/10**18
+    return balance;
+  } catch (err) {
+    return -1;
+  }
 }
 
 // #Skunkworks
@@ -38,7 +96,6 @@ let ongoingGraphIncident = false;
 let ongoingQAIncident = false;
 
 module.exports = robot => {
-  const { brain, messageChannel } = robot
   const channel = robot.client.channels.cache.get(SKUNKWORKS_CHANNEL)
 
   function status(input, threshold1, threshold2){
@@ -52,6 +109,7 @@ module.exports = robot => {
   }
 
   async function getMessage() {
+    console.log('local')
     let message = ""
     // Get latest block from graph
     const graphNumberRes = getGraphLatestBlock("https://xdai.colony.io/graph/subgraphs/name/joinColony/subgraph")
@@ -61,97 +119,46 @@ module.exports = robot => {
     const qaGraphNumberRes = getGraphLatestBlock("http://thegraph-query-red-network-100:8000/subgraphs/name/joinColony/subgraph")
 
     // Get latest block from blockscout
-    const blockscoutRes = fetch("https://blockscout.com/xdai/mainnet/api?module=block&action=eth_block_number")
+
+    const blockscoutRes = getBlockscoutLatestBlock()
 
     // Get latest block from our RPC
-    gnosischainRpcRes = fetch("https://rpc.gnosischain.com/", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        "jsonrpc":"2.0",
-        "method":"eth_blockNumber",
-        "params":[],
-        "id":1
-      })
-    })
+    const gnosischainRes = getRPCLatestBlock("https://rpc.gnosischain.com/")
 
     // Get latest block from our RPC
-    rpcRes = fetch("https://xdai.colony.io/rpc2/", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        "jsonrpc":"2.0",
-        "method":"eth_blockNumber",
-        "params":[],
-        "id":1
-      })
-    })
+    const rpcRes = getRPCLatestBlock("https://xdai.colony.io/rpc2/")
 
     // Get miner balance.
-    balanceRes = fetch("https://xdai.colony.io/rpc2/", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        "jsonrpc":"2.0",
-        "method":"eth_getBalance",
-        "params":[process.env.MINER_ADDRESS],
-        "id":1
-      })
-    })
+    const balanceRes = await getBalance(process.env.MINER_ADDRESS, "https://xdai.colony.io/rpc2/")
     
     // Get mtx broadcaster balance.
-    mtxBalanceRes = fetch("https://xdai.colony.io/rpc2/", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        "jsonrpc":"2.0",
-        "method":"eth_getBalance",
-        "params":[process.env.BROADCASTER_ADDRESS],
-        "id":1
-      })
-    })
+    const mtxBalanceRes = await getBalance(process.env.BROADCASTER_ADDRESS, "https://xdai.colony.io/rpc2/")
 
+    let [graphNumber, qaGraphNumber, blockScoutLatestBlock, RPCBlock, minerBalance, gnosischainLatestBlock, mtxBalance] = await Promise.all([graphNumberRes, qaGraphNumberRes, blockscoutRes, rpcRes, balanceRes, gnosischainRes, mtxBalanceRes])
 
-    const [graphNumber, qaGraphNumber, blockScoutBlock, RPCBlock, balance, gnosischainRpcBlock, mtxBalance] = await Promise.all([graphNumberRes, qaGraphNumberRes, blockscoutRes, rpcRes, balanceRes, gnosischainRpcRes, mtxBalanceRes])
-
-    output = await blockScoutBlock.json()
-    let blockscoutLatestBlock = parseInt(output.result,16)
-    message += `Blockscout latest block: ${blockscoutLatestBlock}\n`
+    message += `Blockscout latest block: ${blockScoutLatestBlock}\n`
 
     // Gnosischain.com latest block
-    output = await gnosischainRpcBlock.json()
-    gnosischainLatestBlock = parseInt(output.result,16)
     message += `Gnosischain.com latest block: ${gnosischainLatestBlock}\n`
 
     // How does our rpc block compare?
-    output = await RPCBlock.json()
-    rpcLatestBlock = parseInt(output.result,16)
-    
-    if (isNaN(blockscoutLatestBlock)) { blockscoutLatestBlock = rpcLatestBlock }
+    if (isNaN(blockScoutLatestBlock)) { blockScoutLatestBlock = RPCBlock }
 
-    smallestRpcDiscrepancy = Math.min(
-        Math.abs(rpcLatestBlock-blockscoutLatestBlock),
-        Math.abs(rpcLatestBlock-gnosischainLatestBlock)
+    const smallestRpcDiscrepancy = Math.min(
+        Math.abs(RPCBlock-blockScoutLatestBlock),
+        Math.abs(RPCBlock-gnosischainLatestBlock)
     )
-    message += `${status(smallestRpcDiscrepancy, 12, 24)} Our RPC latest block: ${rpcLatestBlock}\n`
+    message += `${status(smallestRpcDiscrepancy, 12, 24)} Our RPC latest block: ${RPCBlock}\n`
     
     // Graph latest block
-    smallestGraphDiscrepancy = Math.min(
-        Math.abs(graphNumber-blockscoutLatestBlock),
+    const smallestGraphDiscrepancy = Math.min(
+        Math.abs(graphNumber-blockScoutLatestBlock),
         Math.abs(graphNumber-gnosischainLatestBlock)
     )
 
     message += `${status(smallestGraphDiscrepancy, 24, 48)} Our graph latest block: ${graphNumber}\n`
 
-    if ((blockscoutLatestBlock - graphNumber) >= 48 && !ongoingGraphIncident){
+    if ((blockScoutLatestBlock - graphNumber) >= 48 && !ongoingGraphIncident){
       try { // Try and restart the graph digest pod
         // By the time this happens, the deployments script should have authed us
         // Get production colour
@@ -170,19 +177,19 @@ module.exports = robot => {
     }
 
     // QA Graph latest block
-    smallestQAGraphDiscrepancy = Math.min(
-        Math.abs(qaGraphNumber-blockscoutLatestBlock),
+    const smallestQAGraphDiscrepancy = Math.min(
+        Math.abs(qaGraphNumber-blockScoutLatestBlock),
         Math.abs(qaGraphNumber-gnosischainLatestBlock)
     )
 
-    if ((blockscoutLatestBlock - qaGraphNumber) >= 48  && !ongoingQAIncident){
+    if ((blockScoutLatestBlock - qaGraphNumber) >= 48  && !ongoingQAIncident){
       ongoingQAIncident = true;
       try { // Try and restart the qa graph digest pod
         // By the time this happens, the deployments script should have authed us
         // QA colour is red
         const colour = "red"
         // Get production graph digest node
-        res = await exec(`kubectl get pods --sort-by=.metadata.creationTimestamp | grep digest-${colour} | tail -n1 | awk '{print $1}' | tr -d '\n'`)
+        const res = await exec(`kubectl get pods --sort-by=.metadata.creationTimestamp | grep digest-${colour} | tail -n1 | awk '{print $1}' | tr -d '\n'`)
         const qaGraphDigest = res.stdout;
         // delete it
         await exec(`kubectl delete pod ${qaGraphDigest}`)
@@ -191,7 +198,7 @@ module.exports = robot => {
         console.log(err)
         await channel.send("**Attempted restart of QA graph failed - check logs.**\n")
       }
-    } else if ((blockscoutLatestBlock - qaGraphNumber) < 48  && ongoingQAIncident){
+    } else if ((blockScoutLatestBlock - qaGraphNumber) < 48  && ongoingQAIncident){
       ongoingQAIncident = false;
       await channel.send(`QA subgraph appears fixed`)
     }
@@ -199,32 +206,34 @@ module.exports = robot => {
 
     // Miner balance
 
-    output = await balance.json()
-    minerBalance = parseInt(output.result,16)/10**18
     message += `${status(-minerBalance, -1, -0.5)} Miner balance: ${minerBalance}\n`
 
     // MTX Broadcaster balance
-    output = await mtxBalance.json()
-    broadcasterBalance = parseInt(output.result,16)/10**18
-    message += `${status(-broadcasterBalance, -1, -0.5)} Metatx broadcaster balance: ${broadcasterBalance}\n`
+    message += `${status(-mtxBalance, -1, -0.5)} Metatx broadcaster balance: ${mtxBalance}\n`
 
     // Get reputation mining cycle status
-    const provider = new ethers.providers.JsonRpcProvider("https://rpc.gnosischain.com")
-    cn = new ethers.Contract(process.env.NETWORK_ADDRESS, networkABI, provider)
-    miningAddress = await cn.getReputationMiningCycle(true);
+    let secondsSinceOpen = -1;
+    let nSubmitted = -1;
+    try {
+      const provider = new ethers.providers.JsonRpcProvider("https://rpc.gnosischain.com")
+      const cn = new ethers.Contract(process.env.NETWORK_ADDRESS, networkABI, provider)
+      const miningAddress = await cn.getReputationMiningCycle(true);
 
-    rm = new ethers.Contract(miningAddress, miningABI, provider);
-    openTimestamp = await rm.getReputationMiningWindowOpenTimestamp();
-    secondsSinceOpen = Math.floor(Date.now()/1000) - openTimestamp;
+      const rm = new ethers.Contract(miningAddress, miningABI, provider);
+      const openTimestamp = await rm.getReputationMiningWindowOpenTimestamp();
+      secondsSinceOpen = Math.floor(Date.now()/1000) - openTimestamp;
+
+      nSubmitted = await rm.getNUniqueSubmittedHashes();
+    } catch (err) {
+      // Use default values for anything not set
+    }
+
     message += `${status(secondsSinceOpen, 3600, 4500)} Time since last mining cycle completed: ${(secondsSinceOpen/60).toFixed(0)} minutes\n`
-
-    nSubmitted = await rm.getNUniqueSubmittedHashes();
-
     message += `${status(nSubmitted, 2,10000)} ${nSubmitted} unique submissions so far this cycle\n`
     return message
   }
 
-  robot.hear(/^!status$/, async (res) => {
+  robot.hear(/^!status$/, async () => {
     const message = await getMessage();
     channel.send(message)
     if (message.indexOf("🔴") == -1){
@@ -250,7 +259,7 @@ module.exports = robot => {
     }
   }
 
-  const setupCronJob = robot => {
+  const setupCronJob = () => {
   const job = new CronJob({
     // Every minute
     cronTime: '00 * * * * *',
@@ -263,5 +272,5 @@ module.exports = robot => {
   })
   job.start()
   }
-  setupCronJob(robot)
+  setupCronJob()
 }
