@@ -16,7 +16,7 @@ module.exports = robot => {
   const contract = new ethers.Contract(NETWORK_ADDRESS, colonyABI, provider)
 
   contract.on("ExtensionUpgraded", (extensionId, colonyAddress, version) => {
-    if (version.toString() === '6') {
+    if (version.toString() === '6' && extensionId === '0xdc951b3d4193c331186bc2de3b4e659e51d8b00ef92751ae69abaa48a6ab38dd') {
       message = 'Extension Upgraded in Colony: ' + colonyAddress
       channel.send(`<@${DISCORD_USER_ID}> ` + message)
     }
