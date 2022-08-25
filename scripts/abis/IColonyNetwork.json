@@ -1,22 +1,47 @@
 [
-    {
-      "inputs": [
+  {
+    "inputs": [
+      {
+        "internalType": "bool",
+        "name": "_active",
+        "type": "bool"
+      }
+    ],
+    "name": "getReputationMiningCycle",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "repMiningCycleAddress",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "anonymous": false,
+    "inputs": [
         {
-          "internalType": "bool",
-          "name": "_active",
-          "type": "bool"
-        }
-      ],
-      "name": "getReputationMiningCycle",
-      "outputs": [
+            "indexed": true,
+            "internalType": "bytes32",
+            "name": "extensionId",
+            "type": "bytes32"
+        },
         {
-          "internalType": "address",
-          "name": "repMiningCycleAddress",
-          "type": "address"
+            "indexed": true,
+            "internalType": "address",
+            "name": "colony",
+            "type": "address"
+        },
+        {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "version",
+            "type": "uint256"
         }
-      ],
-      "stateMutability": "view",
-      "type": "function",
-      "constant": true
-    }
-  ]
+    ],
+    "name": "ExtensionUpgraded",
+    "type": "event"
+  }
+]
