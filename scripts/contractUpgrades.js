@@ -8,7 +8,7 @@ const NETWORK_ADDRESS = process.env.NETWORK_ADDRESS
 // Gnosis Chain RPC URL
 const RPC_URL = process.env.RPC_URL
 // Ping Admin User
-const DISCORD_USER_ID = process.env.DISCORD_USER_ID
+const DISCORD_USER_ID = process.env.UPGRADE_ALERT_DISCORD_USER_ID
 
 module.exports = robot => {
   const channel = robot.client.channels.cache.get(SKUNKWORKS_CHANNEL)
