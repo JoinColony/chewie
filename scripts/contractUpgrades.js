@@ -10,15 +10,40 @@ const RPC_URL = process.env.RPC_URL
 // Ping Admin User
 const DISCORD_USER_ID = process.env.UPGRADE_ALERT_DISCORD_USER_ID
 
+async function getStorageSlot(url, address, slot) {
+  try {
+    const rpcRes = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        "jsonrpc":"2.0",
+        "method":"eth_getStorageAt",
+        "params":[address, slot],
+        "id":1
+      })
+    })
+    const output = await rpcRes.json()
+    return output.result;
+  } catch (err) {
+    return -1;
+  }
+}
+
+
 module.exports = robot => {
   const channel = robot.client.channels.cache.get(SKUNKWORKS_CHANNEL)
   const provider = new ethers.providers.JsonRpcProvider(RPC_URL)
   const contract = new ethers.Contract(NETWORK_ADDRESS, colonyABI, provider)
 
-  contract.on("ExtensionUpgraded", (extensionId, colonyAddress, version) => {
+  contract.on("ExtensionUpgraded", async (extensionId, colonyAddress, version) => {
     if (version.toString() === '6' && extensionId === '0xdc951b3d4193c331186bc2de3b4e659e51d8b00ef92751ae69abaa48a6ab38dd') {
-      message = 'Extension Upgraded in Colony: ' + colonyAddress
-      channel.send(`<@${DISCORD_USER_ID}> ` + message)
+      const message = 'Extension Upgraded in Colony: ' + colonyAddress
+      channel.send(`<@${DISCORD_USER_ID}> ` + message);
+      const ghostMotions = await getStorageSlot("https://rpc.gnosischain.com/", colonyAddress, 16)
+      const ghostMotionsInt = parseInt(ghostMotions, 16);
+      channel.send(`That colony has ${ghostMotionsInt} ghost motions.`)
     }
   })
 
