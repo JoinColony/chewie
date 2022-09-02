@@ -38,10 +38,12 @@ module.exports = robot => {
   const contract = new ethers.Contract(NETWORK_ADDRESS, colonyABI, provider)
 
   contract.on("ExtensionUpgraded", async (extensionId, colonyAddress, version) => {
-    if (version.toString() === '6' && extensionId === '0xdc951b3d4193c331186bc2de3b4e659e51d8b00ef92751ae69abaa48a6ab38dd') {
+    const VOTING_REPUTATION="0xdc951b3d4193c331186bc2de3b4e659e51d8b00ef92751ae69abaa48a6ab38dd";
+    if (version.toString() === '6' && extensionId === VOTING_REPUTATION) {
       const message = 'Extension Upgraded in Colony: ' + colonyAddress
       channel.send(`<@${DISCORD_USER_ID}> ` + message);
-      const ghostMotions = await getStorageSlot("https://rpc.gnosischain.com/", colonyAddress, 16)
+      const extensionAddress = await contract.getExtensionInstallation(VOTING_REPUTATION, colonyAddress)
+      const ghostMotions = await getStorageSlot("https://rpc.gnosischain.com/", extensionAddress, 16)
       const ghostMotionsInt = parseInt(ghostMotions, 16);
       channel.send(`That colony has ${ghostMotionsInt} ghost motions.`)
     }
