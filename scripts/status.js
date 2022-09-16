@@ -91,6 +91,8 @@ const SKUNKWORKS_CHANNEL = process.env.SKUNKWORKS_DISCORD_CHANNEL;
 const networkABI = require('./abis/IColonyNetwork.json');
 const miningABI = require('./abis/IReputationMiningCycle.json');
 
+const GRAPH_LAG_INCIDENT = 96;
+
 let ongoingGenericIncident = false;
 let ongoingGraphIncident = false;
 let ongoingQAIncident = false;
@@ -156,9 +158,9 @@ module.exports = robot => {
         Math.abs(graphNumber-gnosischainLatestBlock)
     )
 
-    message += `${status(smallestGraphDiscrepancy, 24, 48)} Our graph latest block: ${graphNumber}\n`
+    message += `${status(smallestGraphDiscrepancy, GRAPH_LAG_INCIDENT/2, GRAPH_LAG_INCIDENT)} Our graph latest block: ${graphNumber}\n`
 
-    if ((blockScoutLatestBlock - graphNumber) >= 48 && !ongoingGraphIncident){
+    if ((blockScoutLatestBlock - graphNumber) >= GRAPH_LAG_INCIDENT && !ongoingGraphIncident){
       try { // Try and restart the graph digest pod
         // By the time this happens, the deployments script should have authed us
         // Get production colour
@@ -182,7 +184,7 @@ module.exports = robot => {
         Math.abs(qaGraphNumber-gnosischainLatestBlock)
     )
 
-    if ((blockScoutLatestBlock - qaGraphNumber) >= 48  && !ongoingQAIncident){
+    if ((blockScoutLatestBlock - qaGraphNumber) >= GRAPH_LAG_INCIDENT  && !ongoingQAIncident){
       ongoingQAIncident = true;
       try { // Try and restart the qa graph digest pod
         // By the time this happens, the deployments script should have authed us
@@ -198,7 +200,7 @@ module.exports = robot => {
         console.log(err)
         await channel.send("**Attempted restart of QA graph failed - check logs.**\n")
       }
-    } else if ((blockScoutLatestBlock - qaGraphNumber) < 48  && ongoingQAIncident){
+    } else if ((blockScoutLatestBlock - qaGraphNumber) < GRAPH_LAG_INCIDENT  && ongoingQAIncident){
       ongoingQAIncident = false;
       await channel.send(`QA subgraph appears fixed`)
     }
