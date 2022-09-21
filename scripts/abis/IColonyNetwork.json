@@ -43,5 +43,30 @@
     ],
     "name": "ExtensionUpgraded",
     "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "extensionId",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "colony",
+        "type": "address"
+      }
+    ],
+    "name": "getExtensionInstallation",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "installation",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
   }
 ]

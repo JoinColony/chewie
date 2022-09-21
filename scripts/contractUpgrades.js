@@ -1,5 +1,5 @@
 const { ethers } = require('ethers')
-const colonyABI = require('./abis/IColonyNetwork.json')
+const colonyNetworkABI = require('./abis/IColonyNetwork.json')
 
 // #Skunkworks Channel
 const SKUNKWORKS_CHANNEL = process.env.SKUNKWORKS_DISCORD_CHANNEL
@@ -35,7 +35,7 @@ async function getStorageSlot(url, address, slot) {
 module.exports = robot => {
   const channel = robot.client.channels.cache.get(SKUNKWORKS_CHANNEL)
   const provider = new ethers.providers.JsonRpcProvider(RPC_URL)
-  const contract = new ethers.Contract(NETWORK_ADDRESS, colonyABI, provider)
+  const contract = new ethers.Contract(NETWORK_ADDRESS, colonyNetworkABI, provider)
 
   contract.on("ExtensionUpgraded", async (extensionId, colonyAddress, version) => {
     const VOTING_REPUTATION="0xdc951b3d4193c331186bc2de3b4e659e51d8b00ef92751ae69abaa48a6ab38dd";
