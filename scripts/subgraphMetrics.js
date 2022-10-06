@@ -5,6 +5,7 @@
 const fetch = require('node-fetch')
 const { Wallet } = require('ethers')
 const { getAddress } = require('ethers/utils')
+const moment = require('moment-timezone')
 
 const { getChallenge, getToken } = require('./utils/colonyServer.service')
 
@@ -33,7 +34,7 @@ module.exports = robot => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({"query": `{
-        colonyMetricsDailies(first: 32, orderBy: date, orderDirection: desc) {
+        colonyMetricsDailies(first: 60, orderBy: date, orderDirection: desc) {
           id
           date
           colonies
@@ -41,6 +42,7 @@ module.exports = robot => {
           domains
           totalTokens
           totalUnlockedTokens
+          totalFeesCount
         }
         colonyMetrics(id: 1) {
           id
@@ -48,6 +50,7 @@ module.exports = robot => {
           domains
           totalTokens
           totalUnlockedTokens
+          totalFeesCount
         }
         votingReputationExtensions(first: 5) {
           id
@@ -70,27 +73,37 @@ module.exports = robot => {
     const [metricsOutput] = await Promise.all([metricsRes])
 
     // Calculate colony metrics
-    const latestColonies = metricsOutput.data.colonyMetricsDailies[0].colonies
-    const thirtyDayColonies = metricsOutput.data.colonyMetricsDailies[14].colonies
-    const sixtyDayColonies = metricsOutput.data.colonyMetricsDailies[29].colonies
+    const latestColoniesObj = metricsOutput.data.colonyMetricsDailies.find(daily => daily.colonies > 0)
+    const latestColonies = latestColoniesObj.colonies
+    const thirtyDayColonies = metricsOutput.data.colonyMetricsDailies[29].colonies
+    const sixtyDayColonies = metricsOutput.data.colonyMetricsDailies[59].colonies
     const diffThirtyDayColonies = latestColonies - thirtyDayColonies
     const diffSixtyDayColonies = thirtyDayColonies - sixtyDayColonies
 
-    const newColoniesAvg = avgValue(metricsOutput.data.colonyMetricsDailies.slice(0, 14), "newColonies")
-    const prevNewColoniesAvg = avgValue(metricsOutput.data.colonyMetricsDailies.slice(15, 29), "newColonies")
+    // This could probably be improved
+    const newColoniesAvg = avgValue(metricsOutput.data.colonyMetricsDailies.slice(0, 29), "newColonies")
+    const prevNewColoniesAvg = avgValue(metricsOutput.data.colonyMetricsDailies.slice(30, 59), "newColonies")
+
+    // Calculate colony outgoing transactions metrics
+    const thirtyDayOutgoing = metricsOutput.data.colonyMetricsDailies
+                                .slice(0, 29)
+                                .reduce((prev, curr) => prev + Number(curr.totalFeesCount), 0)
+    const sixtyDayOutgoing = metricsOutput.data.colonyMetricsDailies
+                              .slice(30, 59)
+                              .reduce((prev, curr) => prev + Number(curr.totalFeesCount), 0)
 
     // Get all colony addresses
     const numQueries = Math.ceil(metricsOutput.data.colonyMetrics.colonies / 1000)
     const coloniesArr = []
     for (i = 0; i < numQueries; i++) {
-      const queryParamters = `first: 1000, skip: ${i * 1000}`
+      const queryParameters = `first: 1000, skip: ${i * 1000}`
       const coloniesQuery = fetch(colonyMetrics, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({"query": `{
-          colonies(${queryParamters}) {
+          colonies(${queryParameters}) {
             id
             created
           }
@@ -169,6 +182,90 @@ module.exports = robot => {
       }
     })
 
+    // Get most active Colonies by recent transaction activity
+    // Get Colony main SubGraph
+    const colonySubgraphMetrics = "https://xdai.colony.io/graph/subgraphs/name/joinColony/subgraph"
+    // Get key OneTxPayments
+    const subgraphRes = fetch(colonySubgraphMetrics, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({"query": `{
+        oneTxPayments(first: 1000, orderBy: timestamp, orderDirection: desc) {
+          id
+          payment {
+            to
+            fundingPot {
+              fundingPotPayouts {
+                id
+                token {
+                  address: id
+                  symbol
+                  decimals
+                }
+                amount
+              }
+            }
+          }
+          timestamp
+        }}` ,"variables":{}})
+    })
+      .then(response => response.json())
+      .then(data => {
+        return data
+      })
+      .catch((e) => {
+        console.log(e)
+      })
+
+    const [subgraphOutput] = await Promise.all([subgraphRes])
+
+    const transactionCount = subgraphOutput.data.oneTxPayments.reduce((allColonies, transaction) => {
+      let colonyAddress = transaction.id.split("_")[0]
+      const currCount = allColonies[colonyAddress] ? allColonies[colonyAddress] : 0
+      return {
+        ...allColonies,
+        [colonyAddress]: currCount + 1,
+      }
+    }, {})
+
+    const transactionCountSort = Object.entries(transactionCount).sort(([,a],[,b]) => b - a)
+		const earliestTx = subgraphOutput.data.oneTxPayments[subgraphOutput.data.oneTxPayments.length - 1].timestamp
+    const earliestTxTAgo = moment.unix(earliestTx).fromNow()
+    const uniqueColonies = transactionCountSort.length
+
+    // Get Colony name by address
+    const topColonies = []
+    for (let i = 0; i < 5; i++) {
+      const colonyQuery = fetch(colonySubgraphMetrics, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({"query": `{
+          colonies(where: {id: "${transactionCountSort[i][0]}"}) {
+            id
+            ensName
+          }
+        }` ,"variables":{}})
+      })
+        .then(response => response.json())
+        .then(data => {
+          return data
+        })
+        .catch((e) => {
+          console.log(e)
+        })
+
+      const [colonyOutput] = await Promise.all([colonyQuery])
+      topColonies.push({
+        name: colonyOutput.data.colonies[0].ensName.split(".")[0],
+        address: transactionCountSort[i][0],
+        count: transactionCountSort[i][1]
+      })
+    }
+
     // Create the messages
     message += `**__Colony Metrics__**  ${getChangeIcon(diffThirtyDayColonies, diffSixtyDayColonies)}  \n\n`
 
@@ -178,16 +275,27 @@ module.exports = robot => {
     message += `> 30 day new colonies avg.: **__${numFormat(newColoniesAvg)}__/day**`
     message += ` (**${changeDirection(newColoniesAvg, prevNewColoniesAvg)}%** previous average)\n\n`
 
-    message += `> Total Members: **__${numFormat(uniqueMembers.length)}__**\n`
-    message += `> New members past 30 days: **__${numFormat(thirtyDayMembers)}__**`
+    message += `> Total colony subscriptions: **__${numFormat(uniqueMembers.length)}__**\n`
+    message += `> New subscriptions past 30 days: **__${numFormat(thirtyDayMembers)}__**`
     message += ` (**${changeDirection(thirtyDayMembers, sixtyDayMembers)}%** over previous 30 days)\n\n`
 
+    message += `> Total outgoing transactions: **__${numFormat(metricsOutput.data.colonyMetrics.totalFeesCount)}__**\n`
+    message += `> Outgoing transactions past 30 days: **__${numFormat(thirtyDayOutgoing)}__**`
+    message += ` (**${changeDirection(thirtyDayOutgoing, sixtyDayOutgoing)}%** over previous 30 days)\n\n`
+
+    message += `> Total new tokens created: **__${numFormat(metricsOutput.data.colonyMetrics.totalTokens)}__**\n\n`
     message += `> Total domains created: **__${numFormat(metricsOutput.data.colonyMetrics.domains)}__**\n\n`
 
-    message += `> Total Motions & Disputes Installs: **__${numFormat(metricsOutput.data.votingReputationExtensions[0].installs)}__**\n`
-    message += `> Total Motions & Disputes Uninstalls: **__${numFormat(metricsOutput.data.votingReputationExtensions[0].uninstalled)}__**\n`
+    message += `> Motions & Disputes: **__${numFormat(metricsOutput.data.votingReputationExtensions[0].installs)}__** Installs`
+    message += ` & **__${numFormat(metricsOutput.data.votingReputationExtensions[0].uninstalled)}__** Uninstalls\n`
     message += `> Total Motions created: **__${numFormat(metricsOutput.data.votingReputationExtensions[0].motions)}__**\n`
-    message += `> Total Motion Stakes made: **__${numFormat(metricsOutput.data.votingReputationExtensions[0].motionsStaked)}__**\n`
+    message += `> Total Stakes: **__${numFormat(metricsOutput.data.votingReputationExtensions[0].motionsStaked)}__**\n\n`
+
+    message += `> Number of active Colonies in past ${earliestTxTAgo.replace(' ago', '')}: **__${numFormat(uniqueColonies)}__**\n`
+    message += `> Top 5 active Colonies in past ${earliestTxTAgo.replace(' ago', '')}:\n`
+    topColonies.map((colony) => {
+      return message += `>  • https://xdai.colony.io/colony/${colony.name}: **__${numFormat(colony.count)}__** transactions (${colony.address})\n`
+    })
 
     // subgraphMetrics needs to be updated for these values to work
     // message += `> Total tokens created: **__${metricsOutput.data.colonyMetrics.totalTokens}__**\n`
