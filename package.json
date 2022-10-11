@@ -18,6 +18,7 @@
     "chrono-node": "^1.4.8",
     "coffee-script": "^1.12.7",
     "cron": "^1.8.2",
+    "dotenv": "^16.0.3",
     "env-cmd": "^8.0.2",
     "ethers": "^4.0.39",
     "figma-js": "^1.14.0",
