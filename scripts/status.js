@@ -111,7 +111,6 @@ module.exports = robot => {
   }
 
   async function getMessage() {
-    console.log('local')
     let message = ""
     // Get latest block from graph
     const graphNumberRes = getGraphLatestBlock("https://xdai.colony.io/graph/subgraphs/name/joinColony/subgraph")
