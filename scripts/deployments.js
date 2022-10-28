@@ -221,6 +221,21 @@ module.exports = async function(robot) {
     if (msg.match[3]){
       formData['client_payload']["DEV"] = "true";
     }
+
+    const repo = msg.match[1] === "frontend" ? "colonyDapp" : "colonyServer"
+
+    await request({
+      method: 'POST',
+      uri: `https://api.github.com/repos/joinColony/${repo}/dispatches`,
+      keepAlive: false,
+      body: JSON.stringify(formData),
+      headers:{
+        "Accept": "application/vnd.github.everest-preview+json",
+        "Authorization": `token ${process.env.HUBOT_GITHUB_TOKEN}`,
+        "User-Agent": "JoinColony/chewie",
+      }
+    });
+
     await request({
       method: 'POST',
       uri: `https://api.github.com/repos/joinColony/colony-deployment-scripts/dispatches`,
