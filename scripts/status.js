@@ -131,11 +131,13 @@ module.exports = robot => {
 
     // Get miner balance.
     const balanceRes = await getBalance(process.env.MINER_ADDRESS, "https://xdai.colony.io/rpc2/")
+    const balanceRes2 = await getBalance(process.env.MINER_ADDRESS2, "https://xdai.colony.io/rpc2/")
+    const balanceRes3 = await getBalance(process.env.MINER_ADDRESS3, "https://xdai.colony.io/rpc2/")
     
     // Get mtx broadcaster balance.
     const mtxBalanceRes = await getBalance(process.env.BROADCASTER_ADDRESS, "https://xdai.colony.io/rpc2/")
 
-    let [graphNumber, qaGraphNumber, blockScoutLatestBlock, RPCBlock, minerBalance, gnosischainLatestBlock, mtxBalance] = await Promise.all([graphNumberRes, qaGraphNumberRes, blockscoutRes, rpcRes, balanceRes, gnosischainRes, mtxBalanceRes])
+    let [graphNumber, qaGraphNumber, blockScoutLatestBlock, RPCBlock, minerBalance, minerBalance2, minerBalance3, gnosischainLatestBlock, mtxBalance] = await Promise.all([graphNumberRes, qaGraphNumberRes, blockscoutRes, rpcRes, balanceRes, balanceRes2, balanceRes3, gnosischainRes, mtxBalanceRes])
 
     message += `Blockscout latest block: ${blockScoutLatestBlock}\n`
 
@@ -207,7 +209,9 @@ module.exports = robot => {
 
     // Miner balance
 
-    message += `${status(-minerBalance, -1, -0.5)} Miner balance: ${minerBalance}\n`
+    message += `${status(-minerBalance, -1, -0.5)} Miner balance (\`${process.env.MINER_ADDRESS.slice(0, 6)}...${process.env.MINER_ADDRESS.slice(-4)}\`): ${minerBalance}\n`
+    message += `${status(-minerBalance2, -1, -0.5)} Miner balance (\`${process.env.MINER_ADDRESS2.slice(0, 6)}...${process.env.MINER_ADDRESS2.slice(-4)}\`): ${minerBalance2}\n`
+    message += `${status(-minerBalance3, -1, -0.5)} Miner balance (\`${process.env.MINER_ADDRESS3.slice(0, 6)}...${process.env.MINER_ADDRESS3.slice(-4)}\`): ${minerBalance3}\n`
 
     // MTX Broadcaster balance
     message += `${status(-mtxBalance, -1, -0.5)} Metatx broadcaster balance: ${mtxBalance}\n`
