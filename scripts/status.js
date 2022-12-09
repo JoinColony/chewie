@@ -117,7 +117,9 @@ module.exports = robot => {
 
     // Get latest block from QA graph
 
-    const qaGraphNumberRes = getGraphLatestBlock("http://thegraph-query-red-network-100:8000/subgraphs/name/joinColony/subgraph")
+    // const qaGraphNumberRes = getGraphLatestBlock("http://thegraph-query-red-network-100:8000/subgraphs/name/joinColony/subgraph")
+    // Temporary (fake) url during transition
+    const qaGraphNumberRes = getGraphLatestBlock("https://xdai.colony.io/graph/subgraphs/name/joinColony/subgraph")
 
     // Get latest block from blockscout
 
@@ -161,50 +163,50 @@ module.exports = robot => {
 
     message += `${status(smallestGraphDiscrepancy, GRAPH_LAG_INCIDENT/2, GRAPH_LAG_INCIDENT)} Our graph latest block: ${graphNumber}\n`
 
-    if ((blockScoutLatestBlock - graphNumber) >= GRAPH_LAG_INCIDENT && !ongoingGraphIncident){
-      try { // Try and restart the graph digest pod
-        // By the time this happens, the deployments script should have authed us
-        // Get production colour
-        let res = await exec("kubectl get svc nginx-prod-2 -o yaml | grep colour: | awk '{print $2}' | tr -d '\n'")
-        const productionColour = res.stdout;
-        // Get production graph digest node
-        res = await exec(`kubectl get pods --sort-by=.metadata.creationTimestamp | grep digest-${productionColour} | tail -n1 | awk '{print $1}' | tr -d '\n'`)
-        const productionGraphDigest = res.stdout;
-        // delete it
-        await exec(`kubectl delete pod ${productionGraphDigest}`)
-        message += "**I have tried to restart the graph. If successful, incident will resolve itself shortly**\n"
-      } catch (err) {
-        console.log(err)
-        message += "**Attempted restart of graph failed - check logs. I will not try again for this incident**\n"
-      }
-    }
+    // if ((blockScoutLatestBlock - graphNumber) >= GRAPH_LAG_INCIDENT && !ongoingGraphIncident){
+    //   try { // Try and restart the graph digest pod
+    //     // By the time this happens, the deployments script should have authed us
+    //     // Get production colour
+    //     let res = await exec("kubectl get svc nginx-prod-2 -o yaml | grep colour: | awk '{print $2}' | tr -d '\n'")
+    //     const productionColour = res.stdout;
+    //     // Get production graph digest node
+    //     res = await exec(`kubectl get pods --sort-by=.metadata.creationTimestamp | grep digest-${productionColour} | tail -n1 | awk '{print $1}' | tr -d '\n'`)
+    //     const productionGraphDigest = res.stdout;
+    //     // delete it
+    //     await exec(`kubectl delete pod ${productionGraphDigest}`)
+    //     message += "**I have tried to restart the graph. If successful, incident will resolve itself shortly**\n"
+    //   } catch (err) {
+    //     console.log(err)
+    //     message += "**Attempted restart of graph failed - check logs. I will not try again for this incident**\n"
+    //   }
+    // }
 
-    // QA Graph latest block
-    const smallestQAGraphDiscrepancy = Math.min(
-        Math.abs(qaGraphNumber-blockScoutLatestBlock),
-        Math.abs(qaGraphNumber-gnosischainLatestBlock)
-    )
+    // // QA Graph latest block
+    // const smallestQAGraphDiscrepancy = Math.min(
+    //     Math.abs(qaGraphNumber-blockScoutLatestBlock),
+    //     Math.abs(qaGraphNumber-gnosischainLatestBlock)
+    // )
 
-    if ((blockScoutLatestBlock - qaGraphNumber) >= GRAPH_LAG_INCIDENT  && !ongoingQAIncident){
-      ongoingQAIncident = true;
-      try { // Try and restart the qa graph digest pod
-        // By the time this happens, the deployments script should have authed us
-        // QA colour is red
-        const colour = "red"
-        // Get production graph digest node
-        const res = await exec(`kubectl get pods --sort-by=.metadata.creationTimestamp | grep digest-${colour} | tail -n1 | awk '{print $1}' | tr -d '\n'`)
-        const qaGraphDigest = res.stdout;
-        // delete it
-        await exec(`kubectl delete pod ${qaGraphDigest}`)
-        await channel.send(`**Attempted to restart QA subgraph as it appeared ${smallestQAGraphDiscrepancy} blocks behind.**`)
-      } catch (err) {
-        console.log(err)
-        await channel.send("**Attempted restart of QA graph failed - check logs.**\n")
-      }
-    } else if ((blockScoutLatestBlock - qaGraphNumber) < GRAPH_LAG_INCIDENT  && ongoingQAIncident){
-      ongoingQAIncident = false;
-      await channel.send(`QA subgraph appears fixed`)
-    }
+    // if ((blockScoutLatestBlock - qaGraphNumber) >= GRAPH_LAG_INCIDENT  && !ongoingQAIncident){
+    //   ongoingQAIncident = true;
+    //   try { // Try and restart the qa graph digest pod
+    //     // By the time this happens, the deployments script should have authed us
+    //     // QA colour is red
+    //     const colour = "red"
+    //     // Get production graph digest node
+    //     const res = await exec(`kubectl get pods --sort-by=.metadata.creationTimestamp | grep digest-${colour} | tail -n1 | awk '{print $1}' | tr -d '\n'`)
+    //     const qaGraphDigest = res.stdout;
+    //     // delete it
+    //     await exec(`kubectl delete pod ${qaGraphDigest}`)
+    //     await channel.send(`**Attempted to restart QA subgraph as it appeared ${smallestQAGraphDiscrepancy} blocks behind.**`)
+    //   } catch (err) {
+    //     console.log(err)
+    //     await channel.send("**Attempted restart of QA graph failed - check logs.**\n")
+    //   }
+    // } else if ((blockScoutLatestBlock - qaGraphNumber) < GRAPH_LAG_INCIDENT  && ongoingQAIncident){
+    //   ongoingQAIncident = false;
+    //   await channel.send(`QA subgraph appears fixed`)
+    // }
 
 
     // Miner balance
