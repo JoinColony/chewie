@@ -91,6 +91,8 @@ const SKUNKWORKS_CHANNEL = process.env.SKUNKWORKS_DISCORD_CHANNEL;
 const networkABI = require('./abis/IColonyNetwork.json');
 const miningABI = require('./abis/IReputationMiningCycle.json');
 
+const RPC_URL = "https://xdai.colony.io/rpc/"
+
 const GRAPH_LAG_INCIDENT = 96;
 
 let ongoingGenericIncident = false;
@@ -129,15 +131,15 @@ module.exports = robot => {
     const gnosischainRes = getRPCLatestBlock("https://rpc.gnosischain.com/")
 
     // Get latest block from our RPC
-    const rpcRes = getRPCLatestBlock("https://xdai.colony.io/rpc2/")
+    const rpcRes = getRPCLatestBlock(RPC_URL)
 
     // Get miner balance.
-    const balanceRes = await getBalance(process.env.MINER_ADDRESS, "https://xdai.colony.io/rpc2/")
-    const balanceRes2 = await getBalance(process.env.MINER_ADDRESS2, "https://xdai.colony.io/rpc2/")
-    const balanceRes3 = await getBalance(process.env.MINER_ADDRESS3, "https://xdai.colony.io/rpc2/")
+    const balanceRes = await getBalance(process.env.MINER_ADDRESS, RPC_URL)
+    const balanceRes2 = await getBalance(process.env.MINER_ADDRESS2, RPC_URL)
+    const balanceRes3 = await getBalance(process.env.MINER_ADDRESS3, RPC_URL)
     
     // Get mtx broadcaster balance.
-    const mtxBalanceRes = await getBalance(process.env.BROADCASTER_ADDRESS, "https://xdai.colony.io/rpc2/")
+    const mtxBalanceRes = await getBalance(process.env.BROADCASTER_ADDRESS, RPC_URL)
 
     let [graphNumber, qaGraphNumber, blockScoutLatestBlock, RPCBlock, minerBalance, minerBalance2, minerBalance3, gnosischainLatestBlock, mtxBalance] = await Promise.all([graphNumberRes, qaGraphNumberRes, blockscoutRes, rpcRes, balanceRes, balanceRes2, balanceRes3, gnosischainRes, mtxBalanceRes])
 
