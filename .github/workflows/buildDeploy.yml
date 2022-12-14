@@ -1,36 +1,36 @@
-# name: Build and deploy Chewie docker image
+name: Build and deploy Chewie docker image
 
-# on: 
+on: 
 
-#   workflow_dispatch: # Allows manual workflow trigger
+  workflow_dispatch: # Allows manual workflow trigger
 #   push: # Auto trigger on push to master
 #     branches:
 #        - master
 
-# # Set global env variables
-# env:
-#   AWS_REGION: eu-west-2
-#   ECR_REPOSITORY: chewie
-#   IMAGE_TAG: ${{ github.sha }}
-#   DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+# Set global env variables
+env:
+  AWS_REGION: eu-west-2
+  ECR_REPOSITORY: chewie
+  IMAGE_TAG: ${{ github.sha }}
+  DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 
-# jobs:
+jobs:
 
-#   # # Build chewie and push to AWS ECR
-#   buildAndPush:
+  # # Build chewie and push to AWS ECR
+  buildAndPush:
 
-#     runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
-#     steps:
+    steps:
 
-#       - name: Cancel Previous Runs               
-#         uses: styfle/cancel-workflow-action@0.4.1
-#         with:                                    
-#           access_token: ${{ github.token }}
+      - name: Cancel Previous Runs               
+        uses: styfle/cancel-workflow-action@0.4.1
+        with:                                    
+          access_token: ${{ github.token }}
 
-#       - name: Echo Env Vars through Context
-#         run: |
-#           echo "$GITHUB_CONTEXT"                 
+      - name: Echo Env Vars through Context
+        run: |
+          echo "$GITHUB_CONTEXT"                 
 
 #       - name: Configure AWS credentials                          
 #         uses: aws-actions/configure-aws-credentials@v1           
