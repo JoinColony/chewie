@@ -1,11 +1,10 @@
 name: Build and deploy Chewie docker image
 
-on: 
-
+on:
   workflow_dispatch: # Allows manual workflow trigger
-#   push: # Auto trigger on push to master
-#     branches:
-#        - master
+  push: # Auto trigger on push to master
+    branches:
+       - master
 
 # Set global env variables
 env:
@@ -32,68 +31,68 @@ jobs:
         run: |
           echo "$GITHUB_CONTEXT"                 
 
-#       - name: Configure AWS credentials                          
-#         uses: aws-actions/configure-aws-credentials@v1           
-#         with:                                                    
-#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}        
-#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials                          
+        uses: aws-actions/configure-aws-credentials@v1           
+        with:                                                    
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}        
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-#       - name: Login to Amazon ECR            
-#         id: login-ecr                        
-#         uses: aws-actions/amazon-ecr-login@v1
+      - name: Login to Amazon ECR            
+        id: login-ecr                        
+        uses: aws-actions/amazon-ecr-login@v1
       
-#       - name: Checkout                                  
-#         uses: actions/checkout@v2
+      - name: Checkout                                  
+        uses: actions/checkout@v2
 
-#       - name: Set up Docker Buildx
-#         uses: docker/setup-buildx-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
         
-#       - name: Build and push
-#         uses: docker/build-push-action@v3
-#         with:
-#           context: ${{ github.workspace }}
-#           file: ./Dockerfile
-#           push: true
-#           tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-2.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: ${{ github.workspace }}
+          file: ./Dockerfile
+          push: true
+          tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-2.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
       
-#       - uses: sarisia/actions-status-discord@c193626e5ce172002b8161e116aa897de7ab5383
-#         if: always()
-#         with:
-#           webhook: ${{ env.DISCORD_WEBHOOK }}
+      - uses: sarisia/actions-status-discord@c193626e5ce172002b8161e116aa897de7ab5383
+        if: always()
+        with:
+          webhook: ${{ env.DISCORD_WEBHOOK }}
   
-#   deployQA:
+  deploy:
 
-#     needs: buildAndPush
+    needs: buildAndPush
 
-#     runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
-#     env:
-#       NAMESPACE: chewie
-#       KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+    env:
+      NAMESPACE: chewie
+      KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
 
-#     steps:
+    steps:
 
-#     - name: Configure AWS credentials                          
-#       uses: aws-actions/configure-aws-credentials@v1           
-#       with:                                                    
-#         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}        
-#         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#         aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials                          
+      uses: aws-actions/configure-aws-credentials@v1           
+      with:                                                    
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}        
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
 
-#     - name: Deploy to Kubernetes cluster                                                                            
-#       uses: kodermax/kubectl-aws-eks@c18ef8acdb80d5311a7dd3611c57fcc70e954b37                                                                            
-#       env:                                                                                                          
-#         RELEASE_IMAGE: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-2.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-#       with:                                                                                                         
-#         args: set image deployment/gitbutler chewie=${{ env.RELEASE_IMAGE }} --record -n $NAMESPACE
+    - name: Deploy to Kubernetes cluster                                                                            
+      uses: kodermax/kubectl-aws-eks@c18ef8acdb80d5311a7dd3611c57fcc70e954b37                                                                            
+      env:                                                                                                          
+        RELEASE_IMAGE: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-2.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+      with:                                                                                                         
+        args: set image deployment/gitbutler chewie=${{ env.RELEASE_IMAGE }} --record -n $NAMESPACE
           
-#     - name: Verify Kubernetes deployment                               
-#       uses: kodermax/kubectl-aws-eks@c18ef8acdb80d5311a7dd3611c57fcc70e954b37                              
-#       with:                                                            
-#         args: rollout status deployment/gitbutler -n $NAMESPACE
+    - name: Verify Kubernetes deployment                               
+      uses: kodermax/kubectl-aws-eks@c18ef8acdb80d5311a7dd3611c57fcc70e954b37                              
+      with:                                                            
+        args: rollout status deployment/gitbutler -n $NAMESPACE
     
-#     - uses: sarisia/actions-status-discord@c193626e5ce172002b8161e116aa897de7ab5383
-#       if: always()
-#       with:
-#         webhook: ${{ env.DISCORD_WEBHOOK }}
+    - uses: sarisia/actions-status-discord@c193626e5ce172002b8161e116aa897de7ab5383
+      if: always()
+      with:
+        webhook: ${{ env.DISCORD_WEBHOOK }}
