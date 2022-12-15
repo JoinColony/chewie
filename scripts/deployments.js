@@ -23,11 +23,11 @@ const {
 module.exports = async function(robot) {
 
   // Activate credentials
-  await exec(`echo ${process.env.GCLOUD_SERVICE_KEY} | base64 --decode > /gcloud-service-key.json`);
-  await exec('gcloud auth activate-service-account --key-file /gcloud-service-key.json');
-  await exec(`gcloud config set project ${process.env.GCLOUD_PROJECT_NAME}`);
-  await exec(`gcloud --quiet config set container/cluster ${process.env.GCLOUD_CLUSTER_NAME}`)
-  await exec(`gcloud config set compute/zone ${process.env.GCLOUD_CLOUDSDK_COMPUTE_ZONE}`);
+  // await exec(`echo ${process.env.GCLOUD_SERVICE_KEY} | base64 --decode > /gcloud-service-key.json`);
+  // await exec('gcloud auth activate-service-account --key-file /gcloud-service-key.json');
+  // await exec(`gcloud config set project ${process.env.GCLOUD_PROJECT_NAME}`);
+  // await exec(`gcloud --quiet config set container/cluster ${process.env.GCLOUD_CLUSTER_NAME}`)
+  // await exec(`gcloud config set compute/zone ${process.env.GCLOUD_CLOUDSDK_COMPUTE_ZONE}`);
   // It appears this is not needed to patch the containers as we want, so
   // let's not bother given that it errors
   // await exec(`gcloud --quiet container clusters get-credentials ${process.env.GCLOUD_CLUSTER_NAME}`);
