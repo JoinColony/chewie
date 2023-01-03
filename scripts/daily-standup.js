@@ -127,7 +127,7 @@ const getDaysOffList = (brain) => {
   const standuppers = Object.values(getMap('standuppers', brain)).sort(
     (a, b) => getUserName(a, brain).toLowerCase() > getUserName(b, brain).toLowerCase() ? 1 : -1
   )
-  let output = '**Number of days off since June 17**\n'
+  let output = '**Number of days off this year**\n'
   output += '=============================\n'
   standuppers.forEach(user => {
     output += ` ${getUserName(user, brain)} -- ${
@@ -615,5 +615,20 @@ module.exports = robot => {
       })
     res.send("It's like they've never had a day off.");
   })
+
+  robot.hear(/standup admin days off set (.+) ([0-9]*)/, res => {
+    const { user } = res.message
+    if (!isPrivateDiscordMessage(robot.client, res) || !isAdmin(user, brain)) return
+    const standuppers = Object.values(getMap('standuppers', brain))
+    standuppers
+      .filter(user => getUserName(user, brain) == res.match[1])
+      .forEach(user => {
+        user.nDaysOff = res.match[2]
+        updateMap('standuppers', user.id, user, brain)
+      })
+    res.send("I've set them as you desired");
+  })
+
+
 
 }
