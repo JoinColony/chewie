@@ -114,7 +114,7 @@ module.exports = async function(robot) {
 
   });
 
-  robot.hear(/!deployment admin add <@!(.+)>/, async (res) => {
+  robot.hear(/!deployment admin add <@(.+)>/, async (res) => {
     const { user } = res.message
     const { brain } = robot
     // Can't @ users not in a chat with you, so this needs to be in public now
@@ -126,7 +126,7 @@ module.exports = async function(robot) {
 
     if (addUserWithRole(who, 'admin', brain)) {
       return res.send(
-        `I added <@!${who}> as a deployment admin.`
+        `I added <@${who}> as a deployment admin.`
       )
     }
     return res.send(
@@ -134,7 +134,7 @@ module.exports = async function(robot) {
     )
   })
 
-  robot.hear(/!deployment admin remove <@!(.+)>/, async (res) => {
+  robot.hear(/!deployment admin remove <@(.+)>/, async (res) => {
     const { user } = res.message
     const { brain } = robot
 
