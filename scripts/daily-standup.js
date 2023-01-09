@@ -623,7 +623,7 @@ module.exports = robot => {
     standuppers
       .filter(user => getUserName(user, brain) == res.match[1])
       .forEach(user => {
-        user.nDaysOff = res.match[2]
+        user.nDaysOff = parseInt(res.match[2])
         updateMap('standuppers', user.id, user, brain)
       })
     res.send("I've set them as you desired");
