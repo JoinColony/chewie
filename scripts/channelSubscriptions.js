@@ -42,6 +42,9 @@ const {
 
     const channelId = message.room;
     let channel = await robot.client.channels.fetch(channelId)
+
+    // Only guild text channels. So no DMs, for example
+    if (channel.type !== 0) { return }
     const discordMessage = await channel.messages.fetch(res.message.id)
 
     let member;
