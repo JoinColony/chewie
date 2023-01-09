@@ -39,11 +39,18 @@ const {
 
   robot.hear(/.*/, async res => {
     const { message } = res;
+
     const channelId = message.room;
     let channel = await robot.client.channels.fetch(channelId)
+    const discordMessage = await channel.messages.fetch(res.message.id)
+
     let member;
     try {
-      member = await channel.guild.members.fetch(message.user.id)
+      if (discordMessage.author.bot){
+        member = { nickname: message.user.name }
+      } else {
+        member = await channel.guild.members.fetch(message.user.id)
+      }
     } catch (err){
       console.log(err)
       console.log(JSON.stringify(message));
