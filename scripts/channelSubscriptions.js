@@ -41,7 +41,14 @@ const {
     const { message } = res;
     const channelId = message.room;
     let channel = await robot.client.channels.fetch(channelId)
-    let member = await channel.guild.members.fetch(message.user.id)
+    let member;
+    try {
+      member = await channel.guild.members.fetch(message.user.id)
+    } catch (err){
+      console.log(err)
+      console.log(JSON.stringify(message));
+      return;
+    }
     // Is message in a channel that someone has subscribed to?
     const l = getMap('subscriptions', brain);
     if (l[channelId]){
