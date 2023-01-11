@@ -268,7 +268,7 @@ const checkStandupsDone = robot => {
     // Users who are excused today are incremented if they didn't post a standup
     .filter(
       user =>
-        !hasUserDoneAStandupInTimeToday(user, date, brain) &&
+        !hasUserDoneAStandupToday(user, date, brain) &&
         isUserExcusedToday(user, date, brain)
     )
     .forEach(user => {
