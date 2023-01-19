@@ -236,7 +236,7 @@ module.exports = async function(robot) {
       }
     });
 
-    msg.send(`Keep an eye on the build here: https://github.com/JoinColony/${repo}/actions. A notification on the outcome will also be sent to the chewie-skunkworks channel`)
+    msg.send(`Keep an eye on the build here: https://github.com/JoinColony/${repo}/actions. A notification on the outcome will also be sent to the chewie-skunkworks channel.`)
   });
 
   async function output(msg, res){
