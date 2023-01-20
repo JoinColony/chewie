@@ -60,6 +60,7 @@ jobs:
         if: always()
         with:
           webhook: ${{ env.DISCORD_WEBHOOK }}
+          title: "Build and push"
   
   deploy:
 
@@ -96,3 +97,4 @@ jobs:
       if: always()
       with:
         webhook: ${{ env.DISCORD_WEBHOOK }}
+        title: "Deploy Chewie"
