@@ -19,7 +19,7 @@
 
 module.exports = function(robot) {
   const github = require('githubot')(robot)
-  const issueRegex = /([A-z0-9\-\.]*)?#(\d+)/g
+  const issueRegex = /([/A-z0-9\-.]*)?#(\d+)/g
   const ignoreUsers = 'github|hubot'
   const apiUrl = 'https://api.github.com'
 
