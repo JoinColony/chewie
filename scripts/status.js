@@ -49,7 +49,7 @@ async function getRPCLatestBlock(url) {
     const blockNumber = parseInt(output.result,16)
     return blockNumber
   } catch (err) {
-    return -1;
+    return NaN;
   }
 }
 
@@ -60,7 +60,7 @@ async function getBlockscoutLatestBlock() {
     let blockscoutLatestBlock = parseInt(output.result,16)
     return blockscoutLatestBlock;
   } catch (err) {
-    return -1;
+    return NaN;
   }
 }
 
@@ -149,7 +149,8 @@ module.exports = robot => {
     message += `Gnosischain.com latest block: ${gnosischainLatestBlock}\n`
 
     // How does our rpc block compare?
-    if (isNaN(blockScoutLatestBlock)) { blockScoutLatestBlock = RPCBlock }
+    if (isNaN(blockScoutLatestBlock) && RPCBlock > 0) { blockScoutLatestBlock = RPCBlock }
+    if (isNaN(gnosischainLatestBlock) && RPCBlock > 0) { gnosischainLatestBlock = RPCBlock }
 
     const smallestRpcDiscrepancy = Math.min(
         Math.abs(RPCBlock-blockScoutLatestBlock),
