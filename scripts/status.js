@@ -225,7 +225,14 @@ module.exports = robot => {
     let secondsSinceOpen = -1;
     let nSubmitted = -1;
     try {
-      const provider = new ethers.providers.JsonRpcProvider("https://rpc.gnosischain.com")
+      let provider;
+      // Use our RPC if okay
+      if (RPCBlock > 0){
+        provider = new ethers.providers.JsonRpcProvider(RPC_URL)
+      } else {
+        provider = new ethers.providers.JsonRpcProvider("https://rpc.gnosischain.com/");
+      }
+
       const cn = new ethers.Contract(process.env.NETWORK_ADDRESS, networkABI, provider)
       const miningAddress = await cn.getReputationMiningCycle(true);
 
