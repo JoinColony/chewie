@@ -489,8 +489,9 @@ module.exports = robot => {
     listenRemovePhrase.bind(this, 'praise')
   )
 
-  // At least 3 bold lines with another line following that
-  robot.hear(/(\*\*.+?\*\*.*(\r\n|\r|\n)(.*(\r\n|\r|\n))*?){3,}/, async (res) => {
+  const standupRegex = /((### |\*\*){1,1}.+?(\*\*)?.*(\r\n|\r|\n)(.*(\r\n|\r|\n))*?){3,}/
+  // At least 3 bold lines or small headers with another line following that
+  robot.hear(standupRegex, async (res) => {
     const { user } = res.message
     if (!isChannel(res, HUBOT_STANDUP_CHANNEL) || !isStandupper(user, brain)) {
       return
@@ -511,6 +512,22 @@ module.exports = robot => {
     const message = await channel.messages.fetch(res.message.id)
     message.react(":chewie:719957751316611172")
   })
+
+  robot.hear(/(.*(\r\n|\r|\n)){3,}/, async (res) => {
+    const { user } = res.message
+    if (!isChannel(res, HUBOT_STANDUP_CHANNEL) || !isStandupper(user, brain)) {
+      return
+    }
+
+    // If it's a correctly formatted standup, then ignore
+    if (standupRegex.test(res.message.text)) return;
+    // If it's not a correctly formatted standup, message the user
+    const u = await robot.client.users.fetch(user.id);
+    const channel = robot.client.channels.cache.find(x => x.id == res.message.room)
+    const message = await channel.messages.fetch(res.message.id)
+
+    u.send(`Sorry to disturb you, but if this message: ${message.url} was meant to be a standup, it wasn't formatted correctly. If so, delete it, and try again so I can give you credit!`);
+  });
 
   robot.hear(/[sS]tandup excuse add (.+)/, res => {
     const { user } = res.message
