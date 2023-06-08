@@ -239,6 +239,58 @@ module.exports = async function(robot) {
     msg.send(`Keep an eye on the build here: https://github.com/JoinColony/${repo}/actions. A notification on the outcome will also be sent to the chewie-skunkworks channel.`)
   });
 
+  robot.hear(/!build (cdapp|coinmachine)-(\w+) ([0-9a-fA-F]*) (dev)?/, async msg => {
+    if (!isDeployer(msg.message.user.id)) return;
+
+    const appTypeRepoMapping = {
+      "cdapp": {
+        "frontend": "colonyCDapp",
+        "block-ingestor": "block-ingestor"
+      },
+      "coinmachine": {
+        "frontend": "coinMachine",
+        "block-ingestor": "block-ingestor-coin-machine",
+        "contracts": "coinMachine"
+      }
+      // Add other mappings as needed
+    };
+
+    const app = msg.match[1];
+    const type = msg.match[2];
+    const commitHash = msg.match[3];
+    const isDev = msg.match[4] ? '-dev' : '';
+
+    // Get the corresponding repository
+    const appMapping = appTypeRepoMapping[app];
+    const repo = appMapping ? appMapping[type] : undefined;
+
+    // If the repo is undefined, send a message and return
+    if (typeof repo === "undefined") {
+      msg.reply(`The deployment name "${appMapping}-${type}" is not recognized.`);
+      return;
+    }
+
+    const formData = {
+      'event_type': `${app}-${type}${isDev}`,
+      'client_payload':{
+        JOB: `build-${app}-${type}${isDev}-image`,
+        COMMIT_HASH: commitHash
+      }
+    }
+
+    await request({
+      method: 'POST',
+      uri: `https://api.github.com/repos/company/${repo}/dispatches`,
+      keepAlive: false,
+      body: JSON.stringify(formData),
+      headers:{
+        "Accept": "application/vnd.github.everest-preview+json",
+        "Authorization": `token ${process.env.HUBOT_GITHUB_TOKEN}`,
+        "User-Agent": "company/chewie",
+      }
+    });
+  });
+
   async function output(msg, res){
     if (res.stdout) {
         msg.send(`Stdout:
