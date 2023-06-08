@@ -266,7 +266,7 @@ module.exports = async function(robot) {
 
     // If the repo is undefined, send a message and return
     if (typeof repo === "undefined") {
-      msg.reply(`The deployment name "${appMapping}-${type}" is not recognized.`);
+      msg.send(`The deployment name "${appMapping}-${type}" is not recognized.`);
       return;
     }
 
