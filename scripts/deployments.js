@@ -280,15 +280,17 @@ module.exports = async function(robot) {
 
     await request({
       method: 'POST',
-      uri: `https://api.github.com/repos/company/${repo}/dispatches`,
+      uri: `https://api.github.com/repos/joinColony/${repo}/dispatches`,
       keepAlive: false,
       body: JSON.stringify(formData),
       headers:{
         "Accept": "application/vnd.github.everest-preview+json",
         "Authorization": `token ${process.env.HUBOT_GITHUB_TOKEN}`,
-        "User-Agent": "company/chewie",
+        "User-Agent": "joinColony/chewie",
       }
     });
+
+    msg.send(`Keep an eye on the build here: https://github.com/JoinColony/${repo}/actions. A notification on the outcome will also be sent to the chewie-skunkworks channel.`)
   });
 
   async function output(msg, res){
