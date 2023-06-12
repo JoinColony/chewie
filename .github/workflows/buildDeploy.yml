@@ -9,9 +9,11 @@ on:
 # Set global env variables
 env:
   AWS_REGION: eu-west-2
+  CLUSTER_NAME: qa
   ECR_REPOSITORY: chewie
   IMAGE_TAG: ${{ github.sha }}
   DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+
 
 jobs:
 
@@ -61,7 +63,7 @@ jobs:
         with:
           webhook: ${{ env.DISCORD_WEBHOOK }}
           title: "Build and push"
-  
+
   deploy:
 
     needs: buildAndPush
@@ -70,28 +72,32 @@ jobs:
 
     env:
       NAMESPACE: chewie
-      KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
 
     steps:
 
-    - name: Configure AWS credentials                          
-      uses: aws-actions/configure-aws-credentials@v1           
+    - name: Configure AWS credentials for EKS                         
+      uses: aws-actions/configure-aws-credentials@v2           
       with:                                                    
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}        
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/eks-admin
+        role-session-name: github-cicd
+        role-duration-seconds: 1200
         aws-region: ${{ env.AWS_REGION }}
 
-    - name: Deploy to Kubernetes cluster                                                                            
-      uses: kodermax/kubectl-aws-eks@c18ef8acdb80d5311a7dd3611c57fcc70e954b37                                                                            
+    - name: Configure AWS EKS
+      run: |
+        aws eks --region ${{ env.AWS_REGION }} update-kubeconfig --name ${{ env.CLUSTER_NAME }}
+
+    - name: Deploy to Kubernetes cluster
+      run: |
+        set image deployment/gitbutler chewie=${{ env.RELEASE_IMAGE }} --record -n $NAMESPACE
       env:                                                                                                          
         RELEASE_IMAGE: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-2.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-      with:                                                                                                         
-        args: set image deployment/gitbutler chewie=${{ env.RELEASE_IMAGE }} --record -n $NAMESPACE
-          
-    - name: Verify Kubernetes deployment                               
-      uses: kodermax/kubectl-aws-eks@c18ef8acdb80d5311a7dd3611c57fcc70e954b37                              
-      with:                                                            
-        args: rollout status deployment/gitbutler -n $NAMESPACE
+
+    - name: Validate Kubernetes deployment
+      run: |
+          kubectl rollout status deployment/gitbutler -n ${{ env.NAMESPACE }}
     
     - uses: sarisia/actions-status-discord@c193626e5ce172002b8161e116aa897de7ab5383
       if: always()
