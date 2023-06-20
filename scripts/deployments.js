@@ -239,7 +239,7 @@ module.exports = async function(robot) {
     msg.send(`Keep an eye on the build here: https://github.com/JoinColony/${repo}/actions. A notification on the outcome will also be sent to the chewie-skunkworks channel.`)
   });
 
-  robot.hear(/!build (cdapp|coinmachine)-(\w+) ([0-9a-fA-F]*) (dev)?/, async msg => {
+  robot.hear(/!build (cdapp|coinmachine)-([\w-]+) ([0-9a-fA-F]*)( dev)?/, async msg => {
     if (!isDeployer(msg.message.user.id)) return;
 
     const appTypeRepoMapping = {
