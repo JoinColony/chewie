@@ -137,7 +137,7 @@ module.exports = robot => {
     const balanceRes = await getBalance(process.env.MINER_ADDRESS, RPC_URL)
     const balanceRes2 = await getBalance(process.env.MINER_ADDRESS2, RPC_URL)
     const balanceRes3 = await getBalance(process.env.MINER_ADDRESS3, RPC_URL)
-    
+
     // Get mtx broadcaster balance.
     const mtxBalanceRes = await getBalance(process.env.BROADCASTER_ADDRESS, RPC_URL)
 
@@ -157,7 +157,7 @@ module.exports = robot => {
         Math.abs(RPCBlock-gnosischainLatestBlock)
     )
     message += `${status(smallestRpcDiscrepancy, 12, 24)} Our RPC latest block: ${RPCBlock}\n`
-    
+
     // Graph latest block
     const smallestGraphDiscrepancy = Math.min(
         Math.abs(graphNumber-blockScoutLatestBlock),
@@ -214,12 +214,12 @@ module.exports = robot => {
 
     // Miner balance
 
-    message += `${status(-minerBalance, -1, -0.5)} Miner balance (\`${process.env.MINER_ADDRESS.slice(0, 6)}...${process.env.MINER_ADDRESS.slice(-4)}\`): ${minerBalance}\n`
-    message += `${status(-minerBalance2, -1, -0.5)} Miner balance (\`${process.env.MINER_ADDRESS2.slice(0, 6)}...${process.env.MINER_ADDRESS2.slice(-4)}\`): ${minerBalance2}\n`
-    message += `${status(-minerBalance3, -1, -0.5)} Miner balance (\`${process.env.MINER_ADDRESS3.slice(0, 6)}...${process.env.MINER_ADDRESS3.slice(-4)}\`): ${minerBalance3}\n`
+    message += `${status(-minerBalance, -10, -5)} Miner balance (\`${process.env.MINER_ADDRESS.slice(0, 6)}...${process.env.MINER_ADDRESS.slice(-4)}\`): ${minerBalance}\n`
+    message += `${status(-minerBalance2, -10, -5)} Miner balance (\`${process.env.MINER_ADDRESS2.slice(0, 6)}...${process.env.MINER_ADDRESS2.slice(-4)}\`): ${minerBalance2}\n`
+    message += `${status(-minerBalance3, -10, -5)} Miner balance (\`${process.env.MINER_ADDRESS3.slice(0, 6)}...${process.env.MINER_ADDRESS3.slice(-4)}\`): ${minerBalance3}\n`
 
     // MTX Broadcaster balance
-    message += `${status(-mtxBalance, -1, -0.5)} Metatx broadcaster balance: ${mtxBalance}\n`
+    message += `${status(-mtxBalance, -20, -10)} Metatx broadcaster balance (\`${process.env.BROADCASTER_ADDRESS.slice(0, 6)}...${process.env.BROADCASTER_ADDRESS.slice(-4)}\`): ${mtxBalance}\n`
 
     // Get reputation mining cycle status
     let secondsSinceOpen = -1;
