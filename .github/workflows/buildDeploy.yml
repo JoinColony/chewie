@@ -9,7 +9,7 @@ on:
 # Set global env variables
 env:
   AWS_REGION: eu-west-2
-  CLUSTER_NAME: qa
+  CLUSTER_NAME: qa-cluster
   ECR_REPOSITORY: chewie
   IMAGE_TAG: ${{ github.sha }}
   DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
