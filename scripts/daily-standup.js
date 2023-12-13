@@ -166,7 +166,7 @@ const getLeaderboard = (rerank, brain) => {
     } else {
       movement = '🔽'
     }
-    output += `${rank}. ${movement}  ${getUserName(user, brain)} -- ${
+    output += `**${rank}**. ${movement}  ${getUserName(user, brain)} -- ${
       user.currentCount
     }\n`
     if (rerank) {
