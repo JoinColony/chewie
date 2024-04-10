@@ -53,12 +53,40 @@ async function getRPCLatestBlock(url) {
   }
 }
 
+async function getBlockIngestorLatestBlock(url) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+        "query": "query test {\n  getIngestorStats(id: \"STATS\") {\n    value\n  }\n}\n",
+        "variables": {},
+        "operationName": "test"
+      })
+  });
+  const output = await res.json()
+  const stats = JSON.parse(output.data.getIngestorStats.value);
+  return parseInt(stats.lastBlockNumber,10);
+}
+
 async function getBlockscoutLatestBlock() {
   try {
     const blockScoutBlock = await fetch("https://blockscout.com/xdai/mainnet/api?module=block&action=eth_block_number")
     const output = await blockScoutBlock.json()
     let blockscoutLatestBlock = parseInt(output.result,16)
     return blockscoutLatestBlock;
+  } catch (err) {
+    return NaN;
+  }
+}
+
+async function getArbiscanLatestBlock() {
+  try {
+    const arbiscanBlock = await fetch(`https://api.arbiscan.io/api?module=proxy&action=eth_blockNumber&apikey=${process.env.ARBISCAN_API_KEY}`)
+    const output = await arbiscanBlock.json()
+    let arbiscanLatestBlock = parseInt(output.result,16)
+    return arbiscanLatestBlock;
   } catch (err) {
     return NaN;
   }
@@ -74,7 +102,7 @@ async function getBalance(account, url) {
       body: JSON.stringify({
         "jsonrpc":"2.0",
         "method":"eth_getBalance",
-        "params":[account],
+        "params":[account, "latest"],
         "id":1
       })
     })
@@ -112,8 +140,8 @@ module.exports = robot => {
     return "🔴";
   }
 
-  async function getMessage() {
-    let message = ""
+  async function getMessageGnosis() {
+    let message = "**On Gnosis:**\n"
     // Get latest block from graph
     const graphNumberRes = getGraphLatestBlock("https://xdai.colony.io/graph/subgraphs/name/joinColony/subgraph")
 
@@ -250,6 +278,87 @@ module.exports = robot => {
     return message
   }
 
+  async function getArbitrumMessage() {
+
+    const ARBITRUM_MINER_ADDRESS = "0xd090822a84e037Acc8a169C54a5943FF9fB82236"
+    const ARBITRUM_BROADCASTER_ADDRESS = "0xf4ab92A14c7CBc232E8293C59DfFbd98Fbdf9b3E"
+    const ARBITRUM_NETWORK_ADDRESS = "0xcccccdcc0ccf6c708d860e19353c5f9a49accccc"
+    const ARBITRUM_GRAPH_URL = "https://app.colony.io/auth-proxy/graphql"
+    const ourRPC = process.env.ARBITRUM_RPC
+    const publicRPC = process.env.ARBITRUM_PUBLIC_RPC
+
+
+    // Get latest block from our RPC
+    const ourRpcPromise = getRPCLatestBlock(ourRPC);
+
+    // Get latest block from another RPC
+    const publicRPCPromise = getRPCLatestBlock(publicRPC);
+
+    // Get latest block from block ingestor
+    const blockIngestorNumberPromise = getBlockIngestorLatestBlock(ARBITRUM_GRAPH_URL);
+
+    // Get balance of miner
+    const balancePromise = await getBalance(ARBITRUM_MINER_ADDRESS, ourRPC)
+
+    // Get balance of MTX Broadcaster
+    const mtxBalancePromise = await getBalance(ARBITRUM_BROADCASTER_ADDRESS, ourRPC)
+
+    const arbiscanLatestBlockPromise = getArbiscanLatestBlock()
+
+    let [ourRpcBlock, publicRpcBlock, ingestorNumber, minerBalance, mtxBalance, arbiscanLatestBlock] = await Promise.all([ourRpcPromise, publicRPCPromise, blockIngestorNumberPromise, balancePromise, mtxBalancePromise, arbiscanLatestBlockPromise])
+
+    if (isNaN(arbiscanLatestBlock) && ourRpcBlock > 0) { arbiscanLatestBlock = ourRpcBlock }
+    if (isNaN(publicRpcBlock) && ourRpcBlock > 0) { publicRpcBlock = ourRpcBlock }
+
+    const smallestRpcDiscrepancy = Math.min(
+      Math.abs(ourRpcBlock-arbiscanLatestBlock),
+      Math.abs(ourRpcBlock-publicRpcBlock)
+    )
+
+    // Get time since last mining cycle completed
+    // Get reputation mining cycle status
+    let secondsSinceOpen = -1;
+    let nSubmitted = -1;
+    try {
+      let provider;
+      // Use our RPC if okay
+      if (ourRpcBlock > 0){
+        provider = new ethers.providers.JsonRpcProvider(ourRPC)
+      } else {
+        provider = new ethers.providers.JsonRpcProvider(publicRPC);
+      }
+
+      const cn = new ethers.Contract(ARBITRUM_NETWORK_ADDRESS, networkABI, provider)
+      const miningAddress = await cn.getReputationMiningCycle(true);
+
+      const rm = new ethers.Contract(miningAddress, miningABI, provider);
+      const openTimestamp = await rm.getReputationMiningWindowOpenTimestamp();
+      secondsSinceOpen = Math.floor(Date.now()/1000) - openTimestamp;
+
+      nSubmitted = await rm.getNUniqueSubmittedHashes();
+    } catch (err) {
+      // Use default values for anything not set
+    }
+
+    let message = "**On Arbitrum:**\n"
+    message += `Public RPC latest block: ${publicRpcBlock}\n`
+    message += `Arbiscan latest block: ${arbiscanLatestBlock}\n`
+    message += `${status(smallestRpcDiscrepancy, 60, 120)} Our RPC latest block: ${ourRpcBlock}\n`
+    message += `${status(ingestorNumber-ourRpcBlock, 25*GRAPH_LAG_INCIDENT/2, 25*GRAPH_LAG_INCIDENT)} Our ingestor latest block: ${ingestorNumber}\n`
+    message += `${status(-minerBalance, -0.05, -0.01)} Miner balance (\`${ARBITRUM_MINER_ADDRESS.slice(0, 6)}...${ARBITRUM_MINER_ADDRESS.slice(-4)}\`): ${minerBalance}\n`
+    message += `${status(-mtxBalance, -0.1, -0.01)} Metatx broadcaster balance (\`${ARBITRUM_BROADCASTER_ADDRESS.slice(0, 6)}...${ARBITRUM_BROADCASTER_ADDRESS.slice(-4)}\`): ${mtxBalance}\n`
+    message += `${status(secondsSinceOpen, 3600, 4500)} Time since last mining cycle completed: ${(secondsSinceOpen/60).toFixed(0)} minutes\n`
+    message += `${status(nSubmitted, 2,10000)} ${nSubmitted} unique submissions so far this cycle\n`
+    return message;
+  }
+
+  async function getMessage() {
+    const gnosisMessage = await getMessageGnosis();
+    const arbitrumMessage = await getArbitrumMessage();
+    return "\n" + arbitrumMessage + "\n" + gnosisMessage;
+  }
+
+
   robot.hear(/^!status$/, async () => {
     const message = await getMessage();
     channel.send(message)
@@ -276,6 +385,17 @@ module.exports = robot => {
     }
   }
 
+  async function checkStatusArbitrum(){
+    const message = await getArbitrumMessage();
+    if (message.indexOf("🔴 Our graph latest block") != -1 && !ongoingGraphIncident) {
+      ongoingGraphIncident = true;
+      channel.send("There appears to be an incident with the graph. \n" + message)
+    } else if (message.indexOf("🔴") != -1 && !ongoingGenericIncident && !ongoingGraphIncident){
+      ongoingGenericIncident = true;
+      channel.send("There appears to be a generic incident. \n" + message)
+    }
+  }
+
   const setupCronJob = () => {
   const job = new CronJob({
     // Every minute
@@ -288,6 +408,20 @@ module.exports = robot => {
     timeZone: 'Pacific/Niue'
   })
   job.start()
+
+
+  const arbitrumJob = new CronJob({
+    // Every minute
+    cronTime: '00 * * * * *',
+    onTick: () => {
+      checkStatusArbitrum()
+    },
+    start: true,
+    // Last time zone of the day (UTC-11)
+    timeZone: 'Pacific/Niue'
+  })
+  arbitrumJob.start()
+
   }
   setupCronJob()
 }
