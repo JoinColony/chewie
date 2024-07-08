@@ -6,9 +6,12 @@ const prHelpers = robot => {
   const repo = github.qualified_repo(process.env.HUBOT_GITHUB_REPO)
   const BASE_URL = `https://api.github.com/repos/${repo}`
 
-  const getPRs = async () => {
+  const getPRs = async (base_url) => {
+    if (!base_url) {
+      base_url = BASE_URL
+    }
     return new Promise(resolve => {
-      github.get(`${BASE_URL}/pulls`, res => {
+      github.get(`${base_url}/pulls`, res => {
         resolve(res)
       })
     })
@@ -53,7 +56,7 @@ const prHelpers = robot => {
 
   const getPREvents = async pr => {
     return new Promise(resolve => {
-      github.get(`${BASE_URL}/issues/${pr.number}/events`, res => {
+      github.get(`${pr.issue_url}/events`, res => {
         resolve(res)
       })
     })
@@ -61,7 +64,15 @@ const prHelpers = robot => {
 
   const getReviews = async pr => {
     return new Promise(resolve => {
-      github.get(`${BASE_URL}/pulls/${pr.number}/reviews`, res => {
+      github.get(`${pr.url}/reviews`, res => {
+        resolve(res)
+      })
+    })
+  }
+
+  const getComments = async pr => {
+    return new Promise(resolve => {
+      github.get(`${pr.issue_url}/comments`, res => {
         resolve(res)
       })
     })
@@ -121,7 +132,10 @@ const prHelpers = robot => {
 
   return {
     getPRs,
-    getPRsWithoutReviews
+    getPRsWithoutReviews,
+    getPREvents,
+    getReviews,
+    getComments,
   }
 }
 
