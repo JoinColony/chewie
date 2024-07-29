@@ -55,19 +55,45 @@ const prHelpers = robot => {
   }
 
   const getPREvents = async pr => {
-    return new Promise(resolve => {
-      github.get(`${pr.issue_url}/events`, res => {
-        resolve(res)
+    const events = []
+    let nOnPage = 30
+    let page = 1
+    const ghget = async function(url) {
+      return new Promise(resolve => {
+        github.get(url, res => {
+          resolve(res)
+        })
       })
-    })
+    }
+
+    while (nOnPage === 30) {
+      const res = await ghget(`${pr.issue_url}/events?per_page=${nOnPage}&page=${page}`)
+      nOnPage = res.length
+      page +=1
+      events.push(...res)
+    }
+
+    return events
   }
 
   const getReviews = async pr => {
-    return new Promise(resolve => {
-      github.get(`${pr.url}/reviews`, res => {
-        resolve(res)
-      })
-    })
+      const reviews = []
+      let nOnPage = 30
+      let page = 1
+      const ghget = async function(url) {
+        return new Promise(resolve => {
+          github.get(url, res => {
+            resolve(res)
+          })
+        })
+      }
+      while (nOnPage === 30) {
+        const res = await ghget(`${pr.url}/reviews?per_page=${nOnPage}&page=${page}`)
+        nOnPage = res.length
+        page +=1
+        reviews.push(...res)
+      }
+      return reviews
   }
 
   const getComments = async pr => {

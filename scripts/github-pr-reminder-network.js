@@ -26,7 +26,7 @@ const getMessage = async robot => {
   const BASE_URL = `https://api.github.com/repos/${repo}`
 
 
-  const { getPRs, getReviews, getComments } = prHelpers(robot)
+  const { getPRs, getReviews, getComments, getPREvents } = prHelpers(robot)
   const prs = await getPRs(BASE_URL)
 
   const soon = [];
@@ -40,12 +40,16 @@ const getMessage = async robot => {
       continue;
     }
     const reviews = await getReviews(pr);
-
     const comments = await getComments(pr);
+    const events = await getPREvents(pr);
+
+    const labellingEvents = events.filter(event => event.event === 'labeled' || event.event === 'unlabeled');
+
     const last_review_timestamp = reviews.length > 0 ? reviews[reviews.length - 1].submitted_at : pr.created_at;
     const last_comment_timestamp = comments.length > 0 ? comments[comments.length - 1].created_at : pr.created_at;
+    const last_label_timestamp = labellingEvents.length > 0 ? labellingEvents[labellingEvents.length - 1].created_at : pr.created_at;
 
-    const last_event_timestamp = Math.max(new Date(last_review_timestamp), new Date(last_comment_timestamp));
+    const last_event_timestamp = Math.max(new Date(last_review_timestamp), new Date(last_comment_timestamp), new Date(last_label_timestamp));
 
     const days = getBusinessDatesCount(new Date(last_event_timestamp), new Date());
     if (days >= threshold -2 && days < threshold) {
