@@ -156,12 +156,21 @@ const prHelpers = robot => {
     }, [])
   }
 
+  const getPRCommits = async pr => {
+    return new Promise(resolve => {
+      github.get(`${pr.url}/commits`, res => {
+        resolve(res)
+      })
+    })
+  }
+
   return {
     getPRs,
     getPRsWithoutReviews,
     getPREvents,
     getReviews,
     getComments,
+    getPRCommits,
   }
 }
 
