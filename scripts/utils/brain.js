@@ -12,7 +12,7 @@ module.exports = brainPrefix => {
     const map = getMap(mapKey, brain);
     // Use first free key (incremental numbers) if no key is given
     if (!key) {
-      key = 0;
+      key = 1;
       while (map[key]) {
         key++;
       }
