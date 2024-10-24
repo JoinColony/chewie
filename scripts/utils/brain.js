@@ -10,8 +10,14 @@ module.exports = brainPrefix => {
 
   const addToMap = (mapKey, key, value, brain) => {
     const map = getMap(mapKey, brain);
-    // Use incremental number if no key is given
-    key = key || Object.keys(map).length + 1;
+    // Use first free key (incremental numbers) if no key is given
+    if (!key) {
+      key = 0;
+      while (map[key]) {
+        key++;
+      }
+    }
+ 
     if (map[key]) {
       return false;
     }
