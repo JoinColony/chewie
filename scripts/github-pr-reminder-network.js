@@ -1,3 +1,4 @@
+const { isPrivateDiscordMessage } = require('./utils/channels.js')
 const { prHelpers } = require('./utils/prs.js')
 const CronJob = require('cron').CronJob
 require('dotenv').config()
@@ -95,4 +96,10 @@ const setupCronJob = robot => {
 }
 module.exports = function(robot) {
   setupCronJob(robot)
+
+  robot.hear(/!networkReminder/, async res => {
+    if (!isPrivateDiscordMessage(robot.client, res)) return
+    const message = await getMessage(robot);
+    res.send(message);
+  });
 }
