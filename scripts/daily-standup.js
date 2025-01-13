@@ -322,8 +322,8 @@ const setupCronJob = robot => {
     timeZone: 'Pacific/Niue'
   })
   leaderboardJob.start()
-  
-  
+
+
   const holidayJob = new CronJob({
     // Every sunday at 23:47h, in Pacific/Niue - monday for most people.
     cronTime: '0 47 23 * * 0',
@@ -619,6 +619,19 @@ module.exports = robot => {
       })
     res.send("It's like they never did a standup (or more accurately, it's like they missed yesterday).");
   })
+
+  robot.hear(/standup admin leaderboard set (.+) ([0-9]*)/, res => {
+    const { user } = res.message
+    if (!isPrivateDiscordMessage(robot.client, res) || !isAdmin(user, brain)) return
+    const standuppers = Object.values(getMap('standuppers', brain))
+    standuppers
+      .filter(user => getUserName(user, brain) == res.match[1])
+      .forEach(user => {
+        user.currentCount = parseInt(res.match[2])
+        updateMap('standuppers', user.id, user, brain)
+      })
+    res.send("I've set them as you desired");
+  });
 
   robot.hear(/standup admin days off reset (.+)/, res => {
     const { user } = res.message
