@@ -3,7 +3,6 @@ const moment = require('moment-timezone');
 const getBrain = require('./brain');
 const getTimezoneFromMap = getBrain('timezones').getFromMap;
 
-
 const getOffsetDate = (offset, timestamp = Date.now()) => {
   const d = new Date(timestamp + offset * 60 * 60 * 1000);
   return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`;
@@ -76,6 +75,20 @@ const parseNaturalDate = (expr, user, robot) => {
   return dateStart;
 };
 
+function getBusinessDatesCount(startDate, endDate) {
+  let count = 0;
+  if (startDate > endDate) {
+    return count;
+  }
+  const curDate = new Date(startDate.getTime());
+  while (curDate.toDateString() !== endDate.toDateString()) {
+      const dayOfWeek = curDate.getDay();
+      if(dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+      curDate.setDate(curDate.getDate() + 1);
+  }
+  return count;
+}
+
 module.exports = {
   getOffsetDate,
   getOffsetDay,
@@ -86,4 +99,5 @@ module.exports = {
   dateIsInRange,
   dateIsOlderThan,
   parseNaturalDate,
+  getBusinessDatesCount,
 };

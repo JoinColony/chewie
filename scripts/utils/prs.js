@@ -1,17 +1,45 @@
 const { findLast } = require('lodash')
 require('dotenv').config()
 
+
+
 const prHelpers = robot => {
   const github = require('githubot')(robot)
   const repo = github.qualified_repo(process.env.HUBOT_GITHUB_REPO)
   const BASE_URL = `https://api.github.com/repos/${repo}`
 
+  const ghget = async function(url) {
+    return new Promise(resolve => {
+      github.get(url, res => {
+        resolve(res)
+      })
+    })
+  }
+
+
   const getPRs = async (base_url) => {
     if (!base_url) {
       base_url = BASE_URL
     }
+    const prs = [];
+    let n = 1;
+    let pageContents = ["temp"];
+    while (pageContents.length > 0) {
+      pageContents = await ghget(`${base_url}/pulls?page=${n}`);
+      prs.push(...pageContents);
+      n++;
+    }
+    return prs;
+      // return new Promise(resolve => {
+      //   github.get(`${base_url}/pulls`, res => {
+      //     resolve(res)
+      //   })
+      // })
+  }
+
+  const getTeamMembers = async (org_name, team_slug) => {
     return new Promise(resolve => {
-      github.get(`${base_url}/pulls`, res => {
+      github.get(`https://api.github.com/orgs/${org_name}/teams/${team_slug}/members`, res => {
         resolve(res)
       })
     })
@@ -58,13 +86,6 @@ const prHelpers = robot => {
     const events = []
     let nOnPage = 30
     let page = 1
-    const ghget = async function(url) {
-      return new Promise(resolve => {
-        github.get(url, res => {
-          resolve(res)
-        })
-      })
-    }
 
     while (nOnPage === 30) {
       const res = await ghget(`${pr.issue_url}/events?per_page=${nOnPage}&page=${page}`)
@@ -80,13 +101,6 @@ const prHelpers = robot => {
       const reviews = []
       let nOnPage = 30
       let page = 1
-      const ghget = async function(url) {
-        return new Promise(resolve => {
-          github.get(url, res => {
-            resolve(res)
-          })
-        })
-      }
       while (nOnPage === 30) {
         const res = await ghget(`${pr.url}/reviews?per_page=${nOnPage}&page=${page}`)
         nOnPage = res.length
@@ -171,6 +185,7 @@ const prHelpers = robot => {
     getReviews,
     getComments,
     getPRCommits,
+    getTeamMembers,
   }
 }
 

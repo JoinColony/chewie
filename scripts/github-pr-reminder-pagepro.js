@@ -1,4 +1,5 @@
 const { isPrivateDiscordMessage } = require('./utils/channels.js')
+const { getBusinessDatesCount } = require('./utils/dates.js')
 const { prHelpers } = require('./utils/prs.js')
 const CronJob = require('cron').CronJob
 require('dotenv').config()
@@ -13,35 +14,32 @@ const processPRs = async robot => {
   robot.messageRoom(roomId, message.trim());
 }
 
-function getBusinessDatesCount(startDate, endDate) {
-  let count = 0;
-  const curDate = new Date(startDate.getTime());
-  while (curDate <= endDate) {
-      const dayOfWeek = curDate.getDay();
-      if(dayOfWeek !== 0 && dayOfWeek !== 6) count++;
-      curDate.setDate(curDate.getDate() + 1);
-  }
-  return count;
-}
-
 const getMessage = async robot => {
-  const threshold = 5 // number of days since interaction
+
+
+  const threshold = 3 // number of days since interaction
   const github = require('githubot')(robot)
-  const repo = github.qualified_repo("colonyNetwork")
+  const repo = github.qualified_repo("colonyCDapp")
   const BASE_URL = `https://api.github.com/repos/${repo}`
 
 
-  const { getPRs, getReviews, getComments, getPREvents, getPRCommits } = prHelpers(robot)
+  const { getPRs, getReviews, getComments, getPREvents, getPRCommits, getTeamMembers } = prHelpers(robot)
+  const teamMembers = await getTeamMembers('joincolony', 'pagepro')
+  const pageproLogins = teamMembers.map(m => m.login).filter(l => ["rdig","arrenv"].indexOf(l) === -1);
   const prs = await getPRs(BASE_URL)
 
-  const soon = [];
   const over = [];
 
   for (const pr of prs) {
+    // console.log(pr);
     if (pr.draft) {
       continue;
     }
     if (pr.labels.filter(label => label.name === 'on-hold').length > 0) {
+      continue;
+    }
+    // This is only intended to alert about PRs that have been made by Pagepro team members
+    if (!pageproLogins.includes(pr.user.login)) {
       continue;
     }
     const reviews = await getReviews(pr);
@@ -60,21 +58,14 @@ const getMessage = async robot => {
 
 
     const days = getBusinessDatesCount(new Date(last_event_timestamp), new Date());
-    if (days >= threshold -2 && days < threshold) {
-      soon.push(pr);
-    } else if (days >= threshold) {
+    if (days >= threshold) {
       over.push(pr);
     }
   }
   let response = "";
-  if (soon.length > 0) {
-    response += `**<@&1329387007335727124> The following PRs will be over the threshold of ${threshold} days soon:**\n`
-    soon.forEach(pr => {
-      response += `**PR #${pr.number}:** ${pr.title} <${pr['html_url']}>\n`
-    })
-  }
+
   if (over.length > 0) {
-    response += `**<@&1329387007335727124> The following PRs are over the threshold of ${threshold} days:**\n`
+    response += `** <@&1293125237344571442> The following PagePro PRs haven't had any activity for the last ${threshold} days:**\n`
     over.forEach(pr => {
       response += `**PR #${pr.number}:** ${pr.title} <${pr['html_url']}>\n`
     })
@@ -96,10 +87,10 @@ const setupCronJob = robot => {
 }
 module.exports = function(robot) {
   setupCronJob(robot)
-
-  robot.hear(/!networkReminder/, async res => {
+  
+  robot.hear(/!pageproReminder/, async res => {
     if (!isPrivateDiscordMessage(robot.client, res)) return
-    console.log("Received !networkReminder command - please wait while I query the Github API");
+    console.log("Received !pageproReminder command - please wait while I query the Github API");
     const message = await getMessage(robot);
     res.send(message);
   });
