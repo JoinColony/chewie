@@ -1,4 +1,5 @@
 const { prHelpers } = require('./utils/prs.js')
+const { splitStringByNewLine } = require('./utils/strings.js')
 const CronJob = require('cron').CronJob
 require('dotenv').config()
 
@@ -20,7 +21,7 @@ const getMessages = async robot => {
     prsWithoutReviews.forEach(pr => {
       response += `**PR #${pr.number}:** ${pr.title} <${pr['html_url']}>\n`
     })
-    let responses = splitStringByNewLine(response)
+    let responses = splitStringByNewLine(response, 2000)
     return responses;
   }
 }
@@ -40,24 +41,4 @@ const setupCronJob = robot => {
 
 module.exports = function(robot) {
   setupCronJob(robot)
-}
-
-function splitStringByNewLine(str) {
-  const maxLength = 1500;
-  const lines = str.split('\n');
-  let result = [];
-  let currentString = '';
-  lines.forEach((line) => {
-    if (currentString.length + line.length + 1 <= maxLength) {
-      // Add the line to the current string
-      currentString += line + '\n';
-    } else {
-      // Add the current string to the result array and start a new string
-      result.push(currentString);
-      currentString = line + '\n';
-    }
-  });
-  // Add the final string to the result array
-  result.push(currentString);
-  return result;
 }

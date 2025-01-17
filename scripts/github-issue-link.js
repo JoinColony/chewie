@@ -17,6 +17,8 @@
 // Author:
 //   sprusr
 
+const { splitStringByNewLine } = require('./utils/strings')
+
 module.exports = function(robot) {
   const github = require('githubot')(robot)
   const issueRegex = /([/A-Za-z0-9\-.]*)?#(\d+)/g
@@ -55,6 +57,7 @@ module.exports = function(robot) {
 
       response += `**${type} #${issueNumber}:** ${title} <${url}>\n`
     }
-    msg.send(response.trim())
+    const responses = splitStringByNewLine(response, 2000)
+    responses.forEach(response => msg.send(response.trim()))
   })
 }
