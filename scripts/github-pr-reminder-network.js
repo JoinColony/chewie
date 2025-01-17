@@ -60,9 +60,9 @@ const getMessage = async robot => {
 
 
     const days = getBusinessDatesCount(new Date(last_event_timestamp), new Date());
-    if (days >= threshold -2 && days < threshold) {
+    if (days >= threshold -1 && days <= threshold) {
       soon.push(pr);
-    } else if (days >= threshold) {
+    } else if (days > threshold) {
       over.push(pr);
     }
   }

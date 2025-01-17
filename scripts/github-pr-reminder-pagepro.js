@@ -58,7 +58,7 @@ const getMessage = async robot => {
 
 
     const days = getBusinessDatesCount(new Date(last_event_timestamp), new Date());
-    if (days >= threshold) {
+    if (days > threshold) {
       over.push(pr);
     }
   }
@@ -87,7 +87,7 @@ const setupCronJob = robot => {
 }
 module.exports = function(robot) {
   setupCronJob(robot)
-  
+
   robot.hear(/!pageproReminder/, async res => {
     if (!isPrivateDiscordMessage(robot.client, res)) return
     console.log("Received !pageproReminder command - please wait while I query the Github API");

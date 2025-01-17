@@ -21,7 +21,7 @@ const processPRs = async robot => {
 }
 
 const getMessage = async robot => {
-  const threshold = 2 // number of days since interaction
+  const threshold = 1 // number of days since interaction
   const github = require('githubot')(robot)
   const repo = github.qualified_repo("colonyCDapp")
   const BASE_URL = `https://api.github.com/repos/${repo}`
@@ -60,7 +60,7 @@ const getMessage = async robot => {
     const last_event_timestamp = Math.max(new Date(last_review_timestamp), new Date(last_comment_timestamp), new Date(last_label_timestamp), new Date(last_commit_author_timestamp));
 
     const days = getBusinessDatesCount(new Date(last_event_timestamp), new Date());
-    if (days >= threshold) {
+    if (days > threshold) {
       over.push(pr);
     }
   }
@@ -89,7 +89,7 @@ const setupCronJob = robot => {
 }
 module.exports = function(robot) {
   setupCronJob(robot)
-  
+
   robot.hear(/!notPageproReminder/, async res => {
     if (!isPrivateDiscordMessage(robot.client, res)) return
     res.send("Received !notPageproReminder command - please wait while I query the Github API");
