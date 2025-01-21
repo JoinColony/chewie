@@ -242,9 +242,9 @@ module.exports = robot => {
 
     // Miner balance
 
-    message += `${status(-minerBalance, -10, -5)} Miner balance (\`${process.env.MINER_ADDRESS.slice(0, 6)}...${process.env.MINER_ADDRESS.slice(-4)}\`): ${minerBalance}\n`
-    message += `${status(-minerBalance2, -10, -5)} Miner balance (\`${process.env.MINER_ADDRESS2.slice(0, 6)}...${process.env.MINER_ADDRESS2.slice(-4)}\`): ${minerBalance2}\n`
-    message += `${status(-minerBalance3, -10, -5)} Miner balance (\`${process.env.MINER_ADDRESS3.slice(0, 6)}...${process.env.MINER_ADDRESS3.slice(-4)}\`): ${minerBalance3}\n`
+    message += `${status(-minerBalance, -10, -4)} Miner balance (\`${process.env.MINER_ADDRESS.slice(0, 6)}...${process.env.MINER_ADDRESS.slice(-4)}\`): ${minerBalance}\n`
+    message += `${status(-minerBalance2, -10, -4)} Miner balance (\`${process.env.MINER_ADDRESS2.slice(0, 6)}...${process.env.MINER_ADDRESS2.slice(-4)}\`): ${minerBalance2}\n`
+    message += `${status(-minerBalance3, -10, -4)} Miner balance (\`${process.env.MINER_ADDRESS3.slice(0, 6)}...${process.env.MINER_ADDRESS3.slice(-4)}\`): ${minerBalance3}\n`
 
     // MTX Broadcaster balance
     message += `${status(-mtxBalance, -20, -10)} Metatx broadcaster balance (\`${process.env.BROADCASTER_ADDRESS.slice(0, 6)}...${process.env.BROADCASTER_ADDRESS.slice(-4)}\`): ${mtxBalance}\n`
