@@ -111,11 +111,17 @@ const prHelpers = robot => {
   }
 
   const getComments = async pr => {
-    return new Promise(resolve => {
-      github.get(`${pr.issue_url}/comments`, res => {
-        resolve(res)
-      })
-    })
+    const comments = []
+    let nOnPage = 30
+    let page = 1
+    while (nOnPage === 30) {
+      const res = await ghget(`${pr.url}/comments?per_page=${nOnPage}&page=${page}`)
+      nOnPage = res.length
+      page +=1
+      comments.push(...res)
+    }
+    return comments
+ 
   }
 
   const isReviewOld = (reviewRequestedTimeStamp, threshold) => {
@@ -171,11 +177,16 @@ const prHelpers = robot => {
   }
 
   const getPRCommits = async pr => {
-    return new Promise(resolve => {
-      github.get(`${pr.url}/commits`, res => {
-        resolve(res)
-      })
-    })
+    const commits = []
+    let nOnPage = 30
+    let page = 1
+    while (nOnPage === 30) {
+      const res = await ghget(`${pr.url}/commits?per_page=${nOnPage}&page=${page}`)
+      nOnPage = res.length
+      page +=1
+      commits.push(...res)
+    }
+    return commits
   }
 
   return {
