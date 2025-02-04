@@ -344,7 +344,7 @@ module.exports = robot => {
     message += `Public RPC latest block: ${publicRpcBlock}\n`
     message += `Arbiscan latest block: ${arbiscanLatestBlock}\n`
     message += `${status(smallestRpcDiscrepancy, 60, 120)} Our RPC latest block: ${ourRpcBlock}\n`
-    message += `${status(ingestorNumber-ourRpcBlock, 25*GRAPH_LAG_INCIDENT/2, 25*GRAPH_LAG_INCIDENT)} Our ingestor latest block: ${ingestorNumber}\n`
+    message += `${status(Math.abs(ingestorNumber-ourRpcBlock), 25*GRAPH_LAG_INCIDENT/2, 25*GRAPH_LAG_INCIDENT)} Our ingestor latest block: ${ingestorNumber}\n`
     message += `${status(-minerBalance, -0.05, -0.01)} Miner balance (\`${ARBITRUM_MINER_ADDRESS.slice(0, 6)}...${ARBITRUM_MINER_ADDRESS.slice(-4)}\`): ${minerBalance}\n`
     message += `${status(-mtxBalance, -0.1, -0.01)} Metatx broadcaster balance (\`${ARBITRUM_BROADCASTER_ADDRESS.slice(0, 6)}...${ARBITRUM_BROADCASTER_ADDRESS.slice(-4)}\`): ${mtxBalance}\n`
     message += `${status(secondsSinceOpen, 3600, 4500)} Time since last mining cycle completed: ${(secondsSinceOpen/60).toFixed(0)} minutes\n`
