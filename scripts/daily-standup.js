@@ -343,7 +343,7 @@ const setupCronJob = robot => {
 module.exports = robot => {
   const { brain } = robot
 
-  setupCronJob(robot)
+  // setupCronJob(robot)
 
   // These lines are for debugging. Please leave in and commented for now
   // let done = false
