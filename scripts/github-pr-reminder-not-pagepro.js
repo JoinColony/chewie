@@ -88,7 +88,7 @@ const setupCronJob = robot => {
   job.start()
 }
 module.exports = function(robot) {
-  setupCronJob(robot)
+  // setupCronJob(robot)
 
   robot.hear(/!notPageproReminder/, async res => {
     if (!isPrivateDiscordMessage(robot.client, res)) return
