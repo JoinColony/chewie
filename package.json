@@ -29,7 +29,7 @@
     "hubot-help": "^0.2.2",
     "hubot-redis-brain": "^0.0.4",
     "lodash": "^4.17.21",
-    "moment-timezone": "^0.5.34",
+    "moment-timezone": "^0.5.35",
     "node-fetch": "^2.6.6",
     "promise.allsettled": "^1.0.5",
     "request": "^2.88.2",
