@@ -353,9 +353,9 @@ module.exports = robot => {
   }
 
   async function getMessage() {
-    const gnosisMessage = await getMessageGnosis();
+    // const gnosisMessage = await getMessageGnosis();
     const arbitrumMessage = await getArbitrumMessage();
-    return "\n" + arbitrumMessage + "\n" + gnosisMessage;
+    return "\n" + arbitrumMessage // + "\n" + gnosisMessage;
   }
 
 
